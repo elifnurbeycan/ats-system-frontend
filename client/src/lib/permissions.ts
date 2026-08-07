@@ -1,0 +1,46 @@
+export type PermissionCode =
+  | "USER_VIEW"
+  | "USER_CREATE"
+  | "USER_UPDATE"
+  | "USER_DEACTIVATE"
+  | "USER_ROLE_ASSIGN"
+  | "DEPARTMENT_VIEW"
+  | "DEPARTMENT_CREATE"
+  | "DEPARTMENT_UPDATE"
+  | "DEPARTMENT_DEACTIVATE"
+  | "POSITION_VIEW"
+  | "POSITION_CREATE"
+  | "POSITION_UPDATE"
+  | "POSITION_STATUS_CHANGE"
+  | "CANDIDATE_VIEW"
+  | "CANDIDATE_CREATE"
+  | "CANDIDATE_UPDATE"
+  | "CANDIDATE_PROCESS_VIEW"
+  | "CANDIDATE_PROCESS_CREATE"
+  | "CANDIDATE_STAGE_CHANGE"
+  | "CANDIDATE_COMPENSATION_VIEW"
+  | "CANDIDATE_COMPENSATION_UPDATE"
+  | "INTERVIEW_VIEW"
+  | "INTERVIEW_CREATE"
+  | "INTERVIEW_EVALUATE"
+  | "PIPELINE_VIEW"
+  | "PIPELINE_MANAGE";
+
+type SessionUser = {
+  roles?: string[];
+  permissions?: string[];
+};
+
+export function getSessionUser(): SessionUser | null {
+  try {
+    return JSON.parse(sessionStorage.getItem("user_data") || "null");
+  } catch {
+    return null;
+  }
+}
+
+export function hasPermission(permission: PermissionCode): boolean {
+  const user = getSessionUser();
+  if (user?.roles?.includes("HR")) return true;
+  return user?.permissions?.includes(permission) === true;
+}

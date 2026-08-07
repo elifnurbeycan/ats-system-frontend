@@ -1,0 +1,328 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --font-display: "Manrope", system-ui, sans-serif;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+/*
+ * Beyaz + Mavi Teması
+ * SAP SuccessFactors Recruiting'den ilham alan temiz, profesyonel tasarım
+ * Beyaz arka plan, mavi vurgular, yumuşak gölgeler
+ */
+:root {
+  --radius: 0.5rem;
+  
+  /* Primary - Güçlü mavi */
+  --primary: oklch(0.50 0.18 250);
+  --primary-foreground: oklch(0.99 0 0);
+  
+  /* Chart renkleri - mavi tonları */
+  --chart-1: oklch(0.50 0.18 250);
+  --chart-2: oklch(0.55 0.14 220);
+  --chart-3: oklch(0.60 0.10 190);
+  --chart-4: oklch(0.55 0.18 250);
+  --chart-5: oklch(0.65 0.08 160);
+
+  /* Sidebar - beyaz ton, hafif mavi */
+  --sidebar: oklch(0.975 0.006 250);
+  --sidebar-foreground: oklch(0.25 0.03 250);
+  --sidebar-primary: oklch(0.50 0.18 250);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.95 0.015 250);
+  --sidebar-accent-foreground: oklch(0.35 0.08 250);
+  --sidebar-border: oklch(0.92 0.008 250);
+  --sidebar-ring: oklch(0.50 0.18 250);
+
+  /* Ana arka plan - beyaz */
+  --background: oklch(0.965 0.008 250);
+  --foreground: oklch(0.22 0.02 250);
+  
+  /* Kartlar - beyaz */
+  --card: oklch(0.985 0.004 250);
+  --card-foreground: oklch(0.22 0.02 250);
+  
+  /* Popover */
+  --popover: oklch(0.99 0.003 250);
+  --popover-foreground: oklch(0.22 0.02 250);
+  
+  /* Secondary */
+  --secondary: oklch(0.96 0.005 250);
+  --secondary-foreground: oklch(0.35 0.03 250);
+  
+  /* Muted */
+  --muted: oklch(0.96 0.005 250);
+  --muted-foreground: oklch(0.50 0.015 250);
+  
+  /* Accent */
+  --accent: oklch(0.95 0.01 250);
+  --accent-foreground: oklch(0.22 0.02 250);
+  
+  /* Destructive */
+  --destructive: oklch(0.65 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  
+  /* Border & Input */
+  --border: oklch(0.91 0.008 250);
+  --input: oklch(0.95 0.005 250);
+  --ring: oklch(0.50 0.18 250);
+}
+
+.dark {
+  color-scheme: dark;
+  --primary: oklch(0.68 0.16 250);
+  --primary-foreground: oklch(0.15 0.02 250);
+
+  --chart-1: oklch(0.68 0.16 250);
+  --chart-2: oklch(0.70 0.12 220);
+  --chart-3: oklch(0.72 0.10 190);
+  --chart-4: oklch(0.64 0.16 270);
+  --chart-5: oklch(0.72 0.10 155);
+
+  --background: oklch(0.18 0.018 250);
+  --foreground: oklch(0.92 0.01 250);
+  --card: oklch(0.225 0.018 250);
+  --card-foreground: oklch(0.92 0.01 250);
+  --popover: oklch(0.235 0.018 250);
+  --popover-foreground: oklch(0.92 0.01 250);
+  --secondary: oklch(0.27 0.018 250);
+  --secondary-foreground: oklch(0.90 0.01 250);
+  --muted: oklch(0.275 0.016 250);
+  --muted-foreground: oklch(0.70 0.018 250);
+  --accent: oklch(0.30 0.025 250);
+  --accent-foreground: oklch(0.94 0.01 250);
+  --destructive: oklch(0.67 0.20 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.34 0.018 250);
+  --input: oklch(0.29 0.018 250);
+  --ring: oklch(0.68 0.16 250);
+
+  --sidebar: oklch(0.205 0.02 250);
+  --sidebar-foreground: oklch(0.91 0.01 250);
+  --sidebar-primary: oklch(0.68 0.16 250);
+  --sidebar-primary-foreground: oklch(0.15 0.02 250);
+  --sidebar-accent: oklch(0.285 0.035 250);
+  --sidebar-accent-foreground: oklch(0.94 0.01 250);
+  --sidebar-border: oklch(0.31 0.018 250);
+  --sidebar-ring: oklch(0.68 0.16 250);
+}
+
+@layer base {
+  html {
+    font-size: clamp(14px, 0.78vw, 15px);
+  }
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-size: 1rem;
+    line-height: 1.45;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  a[href],
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    @apply cursor-pointer;
+  }
+}
+
+@layer components {
+  .toaster [data-sonner-toast].ats-toast {
+    background: oklch(0.94 0.035 250) !important;
+    border-color: oklch(0.78 0.09 250) !important;
+    color: oklch(0.27 0.09 250) !important;
+    box-shadow: 0 10px 28px oklch(0.35 0.08 250 / 0.16) !important;
+  }
+
+  .toaster [data-sonner-toast].ats-toast [data-icon] {
+    color: oklch(0.48 0.18 250) !important;
+  }
+
+  .toaster .ats-toast-title {
+    color: oklch(0.25 0.09 250) !important;
+    font-weight: 650 !important;
+  }
+
+  .toaster .ats-toast-description {
+    color: oklch(0.40 0.065 250) !important;
+    opacity: 1 !important;
+  }
+
+  .toaster [data-sonner-toast][data-type="error"].ats-toast {
+    background: oklch(0.95 0.025 25) !important;
+    border-color: oklch(0.80 0.10 25) !important;
+    color: oklch(0.38 0.15 25) !important;
+  }
+
+  .toaster [data-sonner-toast][data-type="error"].ats-toast [data-icon],
+  .toaster [data-sonner-toast][data-type="error"] .ats-toast-title,
+  .toaster [data-sonner-toast][data-type="error"] .ats-toast-description {
+    color: oklch(0.43 0.17 25) !important;
+  }
+
+  .toaster [data-sonner-toast][data-type="warning"].ats-toast {
+    background: oklch(0.96 0.035 85) !important;
+    border-color: oklch(0.82 0.10 75) !important;
+  }
+
+  .page-title {
+    @apply font-sans text-xl sm:text-2xl font-semibold tracking-tight text-foreground;
+  }
+
+  .page-description {
+    @apply mt-1 text-sm text-muted-foreground;
+  }
+
+  .section-title {
+    @apply font-sans text-base sm:text-lg font-semibold text-foreground;
+  }
+
+  .enterprise-panel {
+    @apply rounded-lg border border-border bg-card shadow-sm;
+  }
+
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .flex {
+    min-height: 0;
+    min-width: 0;
+  }
+
+  @media (min-width: 640px) {
+    .container {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+      max-width: 1400px;
+    }
+  }
+}
+
+/* Glassmorphic kartlar - hafif mavi tonlu */
+.glass {
+  background: color-mix(in oklch, var(--card) 96%, transparent);
+  backdrop-filter: blur(12px);
+  color: var(--card-foreground);
+  border: 1px solid color-mix(in oklch, var(--border) 78%, transparent);
+  box-shadow: 0 1px 3px oklch(0.50 0.18 250 / 0.04),
+              0 4px 12px oklch(0.50 0.18 250 / 0.06);
+}
+
+.dark .glass {
+  background: color-mix(in oklch, var(--card) 94%, transparent);
+  border-color: color-mix(in oklch, var(--border) 88%, transparent);
+  box-shadow: 0 1px 3px oklch(0.04 0.01 250 / 0.28),
+              0 8px 24px oklch(0.04 0.01 250 / 0.16);
+}
+
+.glass-hover:hover {
+  box-shadow: 0 4px 16px oklch(0.50 0.18 250 / 0.10),
+              0 1px 4px oklch(0.50 0.18 250 / 0.06);
+  border-color: oklch(0.50 0.18 250 / 0.2);
+}
+
+.dark .glass-hover:hover {
+  border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+  box-shadow: 0 8px 28px oklch(0.04 0.01 250 / 0.28);
+}
+
+/* Aurora arka plan - çok hafif mavi gradient */
+.aurora-bg {
+  background: 
+    radial-gradient(ellipse at 15% 20%, oklch(0.95 0.02 250 / 0.6) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 80%, oklch(0.95 0.015 200 / 0.4) 0%, transparent 50%),
+    oklch(0.99 0.002 250);
+}
+
+/* Animasyonlar */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
