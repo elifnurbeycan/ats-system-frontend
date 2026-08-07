@@ -22,6 +22,7 @@ import {
   Pencil,
   Save,
   PauseCircle,
+  LockKeyhole,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { candidateApi, pipelineApi, candidateProcessApi, type CandidateDetail, type CandidateStageHistory } from "@/lib/api";
@@ -318,6 +319,10 @@ export default function CandidateDetail() {
   };
 
   const saveCompensation = async () => {
+    if (!canUpdateCompensation) {
+      toast.error("Maaş ve teklif bilgilerini güncelleme yetkiniz bulunmuyor.");
+      return;
+    }
     if (!selectedProcess) return;
     const toNumber = (value: string) => value.trim() === "" ? null : Number(value);
     const values = [compensationForm.currentSalary, compensationForm.expectedSalary, compensationForm.offeredSalary];
@@ -744,16 +749,22 @@ export default function CandidateDetail() {
                     </div>
                     <span className="rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary">{selectedProcess.positionTitle}</span>
                   </div>
+                  {!canUpdateCompensation && !compensationLoading && (
+                    <div className="mb-4 flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                      <LockKeyhole className="h-4 w-4 shrink-0" />
+                      Bu bilgileri görüntüleyebilirsiniz ancak güncelleme yetkiniz bulunmuyor.
+                    </div>
+                  )}
                   {compensationLoading ? (
                     <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      <MoneyField label="Mevcut maaş" value={compensationForm.currentSalary} onChange={(value) => setCompensationForm((form) => ({ ...form, currentSalary: value }))} />
-                      <MoneyField label="Beklenen maaş" value={compensationForm.expectedSalary} onChange={(value) => setCompensationForm((form) => ({ ...form, expectedSalary: value }))} />
-                      <MoneyField label="Teklif edilen" value={compensationForm.offeredSalary} onChange={(value) => setCompensationForm((form) => ({ ...form, offeredSalary: value }))} />
+                      <MoneyField label="Mevcut maaş" value={compensationForm.currentSalary} disabled={!canUpdateCompensation} onChange={(value) => setCompensationForm((form) => ({ ...form, currentSalary: value }))} />
+                      <MoneyField label="Beklenen maaş" value={compensationForm.expectedSalary} disabled={!canUpdateCompensation} onChange={(value) => setCompensationForm((form) => ({ ...form, expectedSalary: value }))} />
+                      <MoneyField label="Teklif edilen" value={compensationForm.offeredSalary} disabled={!canUpdateCompensation} onChange={(value) => setCompensationForm((form) => ({ ...form, offeredSalary: value }))} />
                       <div>
                         <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Para birimi</label>
-                        <select value={compensationForm.salaryCurrency} onChange={(event) => setCompensationForm((form) => ({ ...form, salaryCurrency: event.target.value }))} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                        <select disabled={!canUpdateCompensation} value={compensationForm.salaryCurrency} onChange={(event) => setCompensationForm((form) => ({ ...form, salaryCurrency: event.target.value }))} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none disabled:cursor-not-allowed disabled:border-transparent disabled:bg-muted/40 disabled:text-foreground disabled:opacity-100">
                           <option value="TRY">TRY</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option>
                         </select>
                       </div>
@@ -945,11 +956,11 @@ function ProfileField({ label, value, onChange, type = "text", min }: { label: s
   );
 }
 
-function MoneyField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function MoneyField({ label, value, disabled = false, onChange }: { label: string; value: string; disabled?: boolean; onChange: (value: string) => void }) {
   return (
     <div>
       <label className="mb-1.5 block text-xs font-medium text-muted-foreground">{label}</label>
-      <input type="number" min="0" step="0.01" value={value} onChange={(event) => onChange(event.target.value)} placeholder="0,00" className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none" />
+      <input disabled={disabled} type="number" min="0" step="0.01" value={value} onChange={(event) => onChange(event.target.value)} placeholder="0,00" className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:border-transparent disabled:bg-muted/40 disabled:text-foreground disabled:opacity-100" />
     </div>
   );
 }
