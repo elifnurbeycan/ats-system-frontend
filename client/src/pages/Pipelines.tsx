@@ -23,6 +23,7 @@ import { LinkedInLink } from "@/components/candidate/LinkedInLink";
 import { StageChangeDialog } from "@/components/candidate/StageChangeDialog";
 import { hasPermission } from "@/lib/permissions";
 import { exportExcel } from "@/lib/excel";
+import { generateEntityCode } from "@/lib/entity-code";
 import {
   Dialog,
   DialogContent,
@@ -319,32 +320,24 @@ export default function Pipelines() {
 
   const handleCreatePipeline = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPipelineName.trim() || !newPipelineCode.trim()) {
-      toast.error("Ad ve kod alanları zorunludur.");
+    if (!newPipelineName.trim()) {
+      toast.error("Pipeline adı zorunludur.");
       return;
     }
-    if (!/^[A-Za-z0-9_-]+$/.test(newPipelineCode.trim())) {
-      toast.error("Kod yalnızca harf, rakam, _ ve - içerebilir.");
-      return;
-    }
-    if (newPipelineStages.length === 0 || newPipelineStages.some((stage) => !stage.name.trim() || !stage.code.trim())) {
-      toast.error("En az bir aşama ekleyin ve aşama adı ile kodunu doldurun.");
-      return;
-    }
-    if (newPipelineStages.some((stage) => !/^[A-Za-z0-9_-]+$/.test(stage.code.trim()))) {
-      toast.error("Aşama kodları yalnızca harf, rakam, _ ve - içerebilir.");
+    if (newPipelineStages.length === 0 || newPipelineStages.some((stage) => !stage.name.trim())) {
+      toast.error("En az bir aşama ekleyin ve aşama adını doldurun.");
       return;
     }
     setCreateLoading(true);
     try {
       const payload = {
         name: newPipelineName.trim(),
-        code: newPipelineCode.trim(),
+        code: newPipelineCode || generateEntityCode(newPipelineName),
         description: newPipelineDesc.trim() || undefined,
         defaultPipeline: newPipelineDefault,
         stages: newPipelineStages.map((stage, index) => ({
           name: stage.name.trim(),
-          code: stage.code.trim(),
+          code: stage.code || generateEntityCode(stage.name),
           description: stage.description.trim() || undefined,
           displayOrder: index + 1,
           stageType: stage.stageType,
@@ -368,7 +361,7 @@ export default function Pipelines() {
     setDeactivateLoading(true);
     try {
       await pipelineApi.deactivate(deactivateTargetId);
-      toast.success("Pipeline pasifleştirildi.");
+      toast.success("Pipeline silindi.");
       setDeactivateTargetId(null);
       if (selectedPipelineId === deactivateTargetId) {
         setSelectedPipeline(null);
@@ -376,7 +369,7 @@ export default function Pipelines() {
       }
       loadSummaries();
     } catch (err: any) {
-      const msg = err.response?.data?.message || "Pipeline pasifleştirilemedi.";
+      const msg = err.response?.data?.message || "Pipeline silinemedi.";
       toast.error(msg);
     } finally {
       setDeactivateLoading(false);
@@ -493,7 +486,7 @@ export default function Pipelines() {
                   setDeactivateTargetId(pipeline.id);
                 }}
                 className="mr-1 rounded-md p-1.5 text-muted-foreground/30 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 focus:opacity-100"
-                title="Pipeline'ı pasifleştir"
+                title="Pipeline'ı sil"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>}
@@ -939,26 +932,13 @@ export default function Pipelines() {
                   id="pipeline-name-input"
                   type="text"
                   value={newPipelineName}
-                  onChange={(e) => setNewPipelineName(e.target.value)}
+                  onChange={(e) => {
+                    setNewPipelineName(e.target.value);
+                    setNewPipelineCode(generateEntityCode(e.target.value));
+                  }}
                   placeholder="Pipeline adını girin"
                   required
                   className="w-full rounded-xl bg-input/50 border border-border px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">
-                  Kod <span className="text-destructive">*</span>
-                  <span className="text-xs text-muted-foreground font-normal ml-2">(Harf, rakam, _ ve -)</span>
-                </label>
-                <input
-                  id="pipeline-code-input"
-                  type="text"
-                  value={newPipelineCode}
-                  onChange={(e) => setNewPipelineCode(e.target.value.toUpperCase().replace(/\s+/g, "_"))}
-                  placeholder="PIPELINE_KODU"
-                  required
-                  className="w-full rounded-xl bg-input/50 border border-border px-4 py-2.5 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
                 />
               </div>
 
@@ -1022,15 +1002,9 @@ export default function Pipelines() {
                       <div className="grid gap-2 sm:grid-cols-2">
                         <input
                           value={stage.name}
-                          onChange={(event) => setNewPipelineStages((stages) => stages.map((item, stageIndex) => stageIndex === index ? { ...item, name: event.target.value } : item))}
+                          onChange={(event) => setNewPipelineStages((stages) => stages.map((item, stageIndex) => stageIndex === index ? { ...item, name: event.target.value, code: generateEntityCode(event.target.value) } : item))}
                           placeholder="Aşama adı"
-                          className="rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
-                        />
-                        <input
-                          value={stage.code}
-                          onChange={(event) => setNewPipelineStages((stages) => stages.map((item, stageIndex) => stageIndex === index ? { ...item, code: event.target.value.toUpperCase().replace(/\s+/g, "_") } : item))}
-                          placeholder="AŞAMA_KODU"
-                          className="rounded-md border border-border bg-background px-3 py-2 font-mono text-sm focus:border-primary focus:outline-none"
+                          className="rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none sm:col-span-2"
                         />
                         <select
                           value={stage.stageType}
@@ -1091,9 +1065,9 @@ export default function Pipelines() {
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive mx-auto mb-4">
                 <AlertTriangle className="h-7 w-7" />
               </div>
-              <h3 className="font-display text-lg font-semibold text-foreground">Pipeline'ı Pasifleştir</h3>
+              <h3 className="font-display text-lg font-semibold text-foreground">Pipeline'ı Sil</h3>
               <p className="text-sm text-muted-foreground mt-2">
-                Bu pipeline'ı pasifleştirmek istediğinize emin misiniz? Mevcut aday süreçleri etkilenmeyecektir.
+                Bu pipeline'ı silmek istediğinize emin misiniz? Mevcut aday süreçleri etkilenmeyecektir.
               </p>
             </div>
             <div className="flex gap-3 px-6 pb-6">
@@ -1110,7 +1084,7 @@ export default function Pipelines() {
                 className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-destructive px-4 py-2.5 text-sm font-medium text-white hover:bg-destructive/90 transition-all disabled:opacity-50"
               >
                 {deactivateLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                Pasifleştir
+                Sil
               </button>
             </div>
           </div>

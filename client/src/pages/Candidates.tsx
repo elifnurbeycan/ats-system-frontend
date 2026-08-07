@@ -148,7 +148,7 @@ export default function Candidates() {
     setDeleteSubmitting(true);
     try {
       await candidateApi.deactivate(deletingCandidateId);
-      toast.success("Aday başarıyla pasifleştirildi (silindi).");
+      toast.success("Aday silindi.");
       setShowDeleteDialog(false);
       loadData();
     } catch (err: any) {
@@ -740,7 +740,7 @@ export default function Candidates() {
                         {canUpdateCandidate && <button
                           onClick={() => handleOpenDelete(candidate)}
                           className="text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded hover:bg-accent"
-                          title="Adayı Sil / Pasifleştir"
+                          title="Adayı sil"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>}
@@ -1016,9 +1016,9 @@ export default function Candidates() {
       <Dialog open={showDeleteDialog && canUpdateCandidate} onOpenChange={setShowDeleteDialog}>
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
-            <DialogTitle>Adayı Pasifleştir (Sil)</DialogTitle>
+            <DialogTitle>Adayı Sil</DialogTitle>
             <DialogDescription>
-              <strong>{deletingCandidateName}</strong> isimli adayı pasifleştirmek (silmek) istediğinize emin misiniz? Bu aday süreç listelerinden kaldırılacaktır.
+              <strong>{deletingCandidateName}</strong> isimli adayı silmek istediğinize emin misiniz? Bu aday süreç listelerinden kaldırılacaktır.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -1036,7 +1036,7 @@ export default function Candidates() {
                   Siliniyor
                 </>
               ) : (
-                "Evet, Pasifleştir"
+                "Evet, Sil"
               )}
             </Button>
           </DialogFooter>

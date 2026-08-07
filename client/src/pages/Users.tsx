@@ -150,7 +150,7 @@ export default function Users() {
   const handleDeactivate = async (userId: number) => {
     try {
       await userApi.deactivate(userId);
-      toast.success("Kullanıcı pasifleştirildi");
+      toast.success("Kullanıcı silindi");
       await loadData();
     } catch (err: any) {
       toast.error("İşlem başarısız: " + (err.message || "Bilinmeyen hata"));
@@ -349,7 +349,7 @@ export default function Users() {
                             onClick={() => handleDeactivate(user.id)}
                           >
                             <UserX className="w-3 h-3 mr-1" />
-                            Pasifleştir
+                            Sil
                           </Button>
                         ) : (
                           <Button

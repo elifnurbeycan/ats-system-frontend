@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { CandidateIdentity } from "@/components/candidate/CandidateIdentity";
 import { LinkedInLink } from "@/components/candidate/LinkedInLink";
 import { hasPermission } from "@/lib/permissions";
+import { generateEntityCode } from "@/lib/entity-code";
 
 type ViewMode = "departments" | "positions" | "candidates";
 
@@ -236,27 +237,7 @@ export default function Departments() {
       return;
     }
 
-    // Auto-generate code from name
-    const turkishMap: Record<string, string> = {
-      ç: "c", Ç: "C",
-      ğ: "g", Ğ: "G",
-      ı: "i", I: "I",
-      İ: "I",
-      ö: "o", Ö: "O",
-      ş: "s", Ş: "S",
-      ü: "u", Ü: "U"
-    };
-    const asciiName = newDeptName
-      .split("")
-      .map((char) => turkishMap[char] || char)
-      .join("");
-    const baseCode = asciiName
-      .toUpperCase()
-      .replace(/[^A-Z0-9\s_-]/g, "")
-      .trim()
-      .replace(/\s+/g, "_")
-      .slice(0, 40);
-    const generatedCode = `${baseCode}_${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    const generatedCode = generateEntityCode(newDeptName);
 
     setCreateLoading(true);
     try {
@@ -283,7 +264,7 @@ export default function Departments() {
     setDeleteLoading(true);
     try {
       await departmentApi.deactivate(deleteTargetId);
-      toast.success("Departman pasifleştirildi.");
+      toast.success("Departman silindi.");
       setDeleteTargetId(null);
       loadData();
     } catch (err: any) {
@@ -716,7 +697,7 @@ export default function Departments() {
               </div>
               <h3 className="font-display text-lg font-semibold text-foreground">Departmanı Sil</h3>
               <p className="text-sm text-muted-foreground mt-2">
-                Bu departmanı pasifleştirmek istediğinize emin misiniz? Bu işlem mevcut pozisyonları ve adayları etkilemez.
+                Bu departmanı silmek istediğinize emin misiniz? Bu işlem mevcut pozisyonları ve adayları etkilemez.
               </p>
             </div>
             <div className="flex gap-3 px-6 pb-6">
