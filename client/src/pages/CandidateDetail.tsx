@@ -23,16 +23,27 @@ import {
   Save,
   PauseCircle,
   LockKeyhole,
+  Upload,
+  Download,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { candidateApi, pipelineApi, candidateProcessApi, type CandidateDetail, type CandidateStageHistory } from "@/lib/api";
+import type { CandidateCv, CandidateDetail, CandidateStageHistory } from "@/lib/api";
+import { candidateApi } from "@/lib/api/candidate-api";
+import { pipelineApi } from "@/lib/api/pipeline-api";
+import { candidateProcessApi } from "@/lib/api/process-api";
 import { toast } from "sonner";
 import { LinkedInLink } from "@/components/candidate/LinkedInLink";
 import { StageChangeDialog } from "@/components/candidate/StageChangeDialog";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CandidateProfile } from "@/components/candidate/CandidateProfile";
+import { CandidateSidebar } from "@/components/candidate/CandidateSidebar";
+import { EditCandidateProfileDialog } from "@/components/candidate/EditCandidateProfileDialog";
 import { hasPermission } from "@/lib/permissions";
+import { useApplicationContract } from "@/hooks/use-application-contract";
+import { formatFileSize, isAllowedFile } from "@/lib/api/application-contract";
 
 export default function CandidateDetail() {
+  const applicationContract = useApplicationContract();
   const canUpdateCandidate = hasPermission("CANDIDATE_UPDATE");
   const canChangeCandidateStage = hasPermission("CANDIDATE_STAGE_CHANGE");
   const canUpdateCompensation = hasPermission("CANDIDATE_COMPENSATION_UPDATE");
@@ -59,6 +70,8 @@ export default function CandidateDetail() {
   const [actionLoading, setActionLoading] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
+  const [candidateCv, setCandidateCv] = useState<CandidateCv | null>(null);
+  const [profileCvFile, setProfileCvFile] = useState<File | null>(null);
   const [profileForm, setProfileForm] = useState({
     firstName: "", lastName: "", email: "", phone: "", city: "", linkedinUrl: "",
     currentCompany: "", currentJobTitle: "", noticePeriodDays: "",
@@ -73,14 +86,16 @@ export default function CandidateDetail() {
   const loadCandidateData = async () => {
     setLoading(true);
     try {
-      const [detailData, pipelineSummaries] = await Promise.all([
+      const [detailData, pipelineSummaries, cvData] = await Promise.all([
         candidateApi.getById(candidateId),
         pipelineApi.getAll(),
+        candidateApi.getCv(candidateId),
       ]);
       const pipelinesData = await Promise.all(
         pipelineSummaries.map((pipeline) => pipelineApi.getById(pipeline.id))
       );
       setDetail(detailData);
+      setCandidateCv(cvData);
       setPipelines(pipelinesData);
     } catch (err: any) {
       toast.error("Aday detayları yüklenemedi: " + (err.message || "Bilinmeyen hata"));
@@ -287,7 +302,32 @@ export default function CandidateDetail() {
       currentJobTitle: candidate.currentJobTitle || "",
       noticePeriodDays: candidate.noticePeriodDays == null ? "" : String(candidate.noticePeriodDays),
     });
+    setProfileCvFile(null);
     setShowEditProfile(true);
+  };
+
+  const selectProfileCv = (file?: File) => {
+    if (!file) return setProfileCvFile(null);
+    if (!isAllowedFile(file, applicationContract.candidateCv)) {
+      toast.error(`CV yalnızca ${applicationContract.candidateCv.allowedExtensions.join(", ")} formatında yüklenebilir.`);
+      return;
+    }
+    if (file.size > applicationContract.candidateCv.maxFileSizeBytes) {
+      toast.error(`CV dosyası en fazla ${formatFileSize(applicationContract.candidateCv.maxFileSizeBytes)} olabilir.`);
+      return;
+    }
+    setProfileCvFile(file);
+  };
+
+  const deleteCandidateCv = async () => {
+    if (!candidate || !candidateCv || !window.confirm("Adayın CV dosyası silinsin mi?")) return;
+    try {
+      await candidateApi.deleteCv(candidate.id);
+      setCandidateCv(null);
+      toast.success("CV silindi.");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "CV silinemedi.");
+    }
   };
 
   const saveProfile = async () => {
@@ -308,6 +348,7 @@ export default function CandidateDetail() {
         currentJobTitle: profileForm.currentJobTitle.trim() || null,
         noticePeriodDays: profileForm.noticePeriodDays === "" ? null : Number(profileForm.noticePeriodDays),
       });
+      if (profileCvFile) await candidateApi.uploadCv(candidate.id, profileCvFile);
       toast.success("Aday bilgileri güncellendi.");
       setShowEditProfile(false);
       await loadCandidateData();
@@ -376,159 +417,17 @@ export default function CandidateDetail() {
 
   return (
     <div className="h-[calc(100vh-4rem)] flex">
-      {/* LEFT PANEL - Fixed profile panel */}
-      <aside className="w-80 shrink-0 border-r border-border bg-card overflow-y-auto">
-        {/* Back + Candidate avatar */}
-        <div className="p-4 border-b border-border">
-          <Link
-            href="/adaylar"
-            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-4 animate-slide-up"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Adaylara dön
-          </Link>
-
-          <div className="flex items-center gap-3">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 text-primary font-display font-bold text-lg animate-slide-up">
-              {candidate.firstName?.[0]}
-              {candidate.lastName?.[0]}
-            </div>
-            <div className="min-w-0 animate-slide-up">
-              <h2 className="font-display font-bold text-base text-foreground truncate">
-                {candidate.fullName}
-              </h2>
-              <p className="text-xs text-muted-foreground truncate">
-                {candidate.currentJobTitle || "İş Unvanı Yok"}
-              </p>
-            </div>
-          </div>
-
-          {/* Current stage badge */}
-          {currentStage && (
-            <div className="mt-3 space-y-1">
-              {processes.length > 1 && (
-                <p className="text-[10px] font-medium text-muted-foreground">{selectedProcess?.positionTitle}</p>
-              )}
-              <span className={cn("inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium", stageColor)}>
-                {currentStage.name}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Quick contact */}
-        <div className="p-4 border-b border-border space-y-2.5">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">İletişim</h3>
-          {candidate.email ? (
-            <a href={`mailto:${candidate.email}`} className="flex items-center gap-2 text-sm text-foreground hover:text-primary transition-colors">
-              <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <span className="truncate">{candidate.email}</span>
-            </a>
-          ) : (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground/50">
-              <Mail className="h-3.5 w-3.5 shrink-0" />
-              <span>E-posta yok</span>
-            </div>
-          )}
-          {candidate.phone && (
-            <a href={`tel:${candidate.phone}`} className="flex items-center gap-2 text-sm text-foreground hover:text-primary transition-colors">
-              <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <span>{candidate.phone}</span>
-            </a>
-          )}
-          {candidate.city && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5 shrink-0" />
-              <span>{candidate.city}</span>
-            </div>
-          )}
-          <div className="flex items-center">
-            <LinkedInLink url={candidate.linkedinUrl} showLabel className="w-fit" />
-          </div>
-        </div>
-
-        {/* Current position */}
-        <div className="p-4 border-b border-border space-y-2.5">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Mevcut Pozisyon</h3>
-          <div className="flex items-center gap-2 text-sm text-foreground">
-            <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span>{candidate.currentJobTitle || "—"}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-foreground">
-            <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span>{candidate.currentCompany || "—"}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-foreground">
-            <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span>{candidate.noticePeriodDays ? `${candidate.noticePeriodDays} gün ihbar` : "—"}</span>
-          </div>
-        </div>
-
-        {/* Applied positions */}
-        <div className="p-4 space-y-2.5">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Başvurulan Pozisyonlar</h3>
-          {processes.length > 0 ? (
-            <div className="space-y-2">
-              {processes.map((p) => {
-                const processPipeline = pipelines.find((pipeline) => pipeline.id === p.pipelineId);
-                const processStages = [...(processPipeline?.stages || [])].sort((a, b) => a.displayOrder - b.displayOrder);
-                return (
-                <div
-                  key={p.id}
-                  onClick={() => setSelectedProcessId(p.id)}
-                  className={cn(
-                    "cursor-pointer rounded-lg border p-3 transition-colors",
-                    selectedProcess?.id === p.id
-                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                      : "border-border bg-muted/20 hover:border-primary/40"
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-medium text-foreground">{p.positionTitle || "—"}</p>
-                    {selectedProcess?.id === p.id && (
-                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-semibold text-primary">Seçili</span>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{p.pipelineName}</p>
-                  {processStages.length > 0 ? (
-                    <select
-                      value={p.currentStageId}
-                      disabled={actionLoading}
-                      onChange={(event) => {
-                        const targetStageId = Number(event.target.value);
-                        const targetStage = processStages.find((stage) => stage.id === targetStageId);
-                        if (!targetStage || targetStageId === p.currentStageId) return;
-                        setPendingStageChange({
-                          processId: p.id,
-                          fromStage: p.currentStageName,
-                          applicationLabel: p.positionTitle,
-                          targetStageId,
-                          targetStageName: targetStage.name,
-                          successMessage: `${p.positionTitle} süreci ${targetStage.name} aşamasına taşındı.`,
-                          errorPrefix: "Süreç güncellenemedi: ",
-                        });
-                        setSelectedProcessId(p.id);
-                      }}
-                      className="mt-2 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
-                      aria-label={`${p.positionTitle} için aşama seçin`}
-                    >
-                      {processStages.map((stage) => (
-                        <option key={stage.id} value={stage.id}>{stage.name}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <span className="inline-flex items-center mt-1.5 rounded-md bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground font-medium">
-                      {p.currentStageName}
-                    </span>
-                  )}
-                </div>
-              );})}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">Başvuru bulunmuyor.</p>
-          )}
-        </div>
-      </aside>
+      <CandidateSidebar
+        candidate={candidate}
+        processes={processes}
+        pipelines={pipelines}
+        selectedProcess={selectedProcess}
+        currentStage={currentStage}
+        stageColor={stageColor}
+        actionLoading={actionLoading}
+        onSelectProcess={setSelectedProcessId}
+        onStageRequest={setPendingStageChange}
+      />
 
       {/* RIGHT PANEL - Tab view area */}
       <div className="flex-1 overflow-y-auto">
@@ -557,54 +456,13 @@ export default function CandidateDetail() {
 
         {/* Tab content */}
         <div className="p-6">
-          {activeTab === "profil" && (
-            <div className="space-y-6 animate-fade-in">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="section-title">Aday Bilgileri</h2>
-                  <p className="mt-1 text-xs text-muted-foreground">İletişim ve mevcut çalışma bilgilerini yönetin.</p>
-                </div>
-                {canUpdateCandidate && <button type="button" onClick={openProfileEditor} className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted">
-                  <Pencil className="h-4 w-4" /> Bilgileri düzenle
-                </button>}
-              </div>
-              {/* Candidate info grid */}
-              <div className="glass rounded-xl overflow-hidden">
-                <table className="w-full">
-                  <tbody>
-                    <InfoTableRow label="Ad Soyad" value={`${candidate.firstName} ${candidate.lastName}`} />
-                    <InfoTableRow label="E-posta" value={candidate.email || "—"} type="email" />
-                    <InfoTableRow label="Telefon" value={candidate.phone || "—"} type="phone" />
-                    <InfoTableRow label="Şehir" value={candidate.city || "—"} type="location" />
-                    <InfoTableRow label="Mevcut Şirket" value={candidate.currentCompany || "—"} />
-                    <InfoTableRow label="Mevcut Pozisyon" value={candidate.currentJobTitle || "—"} />
-                    <InfoTableRow label="İhbar Süresi" value={candidate.noticePeriodDays ? `${candidate.noticePeriodDays} gün` : "—"} />
-                    <InfoTableRow label="LinkedIn" value={candidate.linkedinUrl || "—"} type="link" />
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Experience section */}
-              <div className="glass rounded-xl p-5">
-                <h3 className="font-display font-semibold text-foreground mb-3">Deneyim</h3>
-                <div className="space-y-3">
-                  {candidate.currentCompany ? (
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted/50 text-muted-foreground mt-0.5">
-                        <Building2 className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{candidate.currentJobTitle || "Ünvan Yok"}</p>
-                        <p className="text-xs text-muted-foreground">{candidate.currentCompany}</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Kayıtlı iş deneyimi bulunmuyor.</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+          {activeTab === "profil" && <CandidateProfile
+            candidate={candidate}
+            cv={candidateCv}
+            canEdit={canUpdateCandidate}
+            onEdit={openProfileEditor}
+            onDownloadCv={() => candidateCv && candidateApi.downloadCv(candidate.id, candidateCv.fileName)}
+          />}
 
           {activeTab === "surec" && (
             <div className="space-y-6 animate-fade-in">
@@ -765,7 +623,7 @@ export default function CandidateDetail() {
                       <div>
                         <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Para birimi</label>
                         <select disabled={!canUpdateCompensation} value={compensationForm.salaryCurrency} onChange={(event) => setCompensationForm((form) => ({ ...form, salaryCurrency: event.target.value }))} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none disabled:cursor-not-allowed disabled:border-transparent disabled:bg-muted/40 disabled:text-foreground disabled:opacity-100">
-                          <option value="TRY">TRY</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option>
+                          {applicationContract.salaryCurrencies.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
                         </select>
                       </div>
                       <div className="flex justify-end sm:col-span-2 lg:col-span-4">
@@ -908,31 +766,20 @@ export default function CandidateDetail() {
         </div>
       </div>
 
-      <Dialog open={showEditProfile && canUpdateCandidate} onOpenChange={(open) => !profileSaving && setShowEditProfile(open)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Aday bilgilerini düzenle</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-2 sm:grid-cols-2">
-            <ProfileField label="Ad *" value={profileForm.firstName} onChange={(value) => setProfileForm((form) => ({ ...form, firstName: value }))} />
-            <ProfileField label="Soyad *" value={profileForm.lastName} onChange={(value) => setProfileForm((form) => ({ ...form, lastName: value }))} />
-            <ProfileField label="E-posta" type="email" value={profileForm.email} onChange={(value) => setProfileForm((form) => ({ ...form, email: value }))} />
-            <ProfileField label="Telefon" value={profileForm.phone} onChange={(value) => setProfileForm((form) => ({ ...form, phone: value }))} />
-            <ProfileField label="Şehir" value={profileForm.city} onChange={(value) => setProfileForm((form) => ({ ...form, city: value }))} />
-            <ProfileField label="LinkedIn" value={profileForm.linkedinUrl} onChange={(value) => setProfileForm((form) => ({ ...form, linkedinUrl: value }))} />
-            <ProfileField label="Mevcut şirket" value={profileForm.currentCompany} onChange={(value) => setProfileForm((form) => ({ ...form, currentCompany: value }))} />
-            <ProfileField label="Mevcut pozisyon" value={profileForm.currentJobTitle} onChange={(value) => setProfileForm((form) => ({ ...form, currentJobTitle: value }))} />
-            <ProfileField label="İhbar süresi (gün)" type="number" min="0" value={profileForm.noticePeriodDays} onChange={(value) => setProfileForm((form) => ({ ...form, noticePeriodDays: value }))} />
-          </div>
-          <DialogFooter>
-            <button type="button" disabled={profileSaving} onClick={() => setShowEditProfile(false)} className="rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-muted">Vazgeç</button>
-            <button type="button" disabled={profileSaving} onClick={saveProfile} className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
-              {profileSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Kaydet
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
+      <EditCandidateProfileDialog
+        open={showEditProfile && canUpdateCandidate}
+        form={profileForm}
+        cv={candidateCv}
+        cvFile={profileCvFile}
+        saving={profileSaving}
+        cvContract={applicationContract.candidateCv}
+        onOpenChange={setShowEditProfile}
+        onFormChange={setProfileForm}
+        onCvSelection={selectProfileCv}
+        onCvDownload={() => candidateCv && candidateApi.downloadCv(candidate.id, candidateCv.fileName)}
+        onCvDelete={deleteCandidateCv}
+        onSave={saveProfile}
+      />
       {canChangeCandidateStage && <StageChangeDialog
         open={Boolean(pendingStageChange)}
         candidateName={candidate.fullName}
@@ -943,15 +790,6 @@ export default function CandidateDetail() {
         onOpenChange={(open) => !open && setPendingStageChange(null)}
         onConfirm={confirmStageChange}
       />}
-    </div>
-  );
-}
-
-function ProfileField({ label, value, onChange, type = "text", min }: { label: string; value: string; onChange: (value: string) => void; type?: string; min?: string }) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-sm font-medium text-foreground">{label}</label>
-      <input type={type} min={min} value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20" />
     </div>
   );
 }

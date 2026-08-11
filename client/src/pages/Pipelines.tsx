@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { CandidateIdentity } from "@/components/candidate/CandidateIdentity";
 import { LinkedInLink } from "@/components/candidate/LinkedInLink";
 import { StageChangeDialog } from "@/components/candidate/StageChangeDialog";
+import { EditPipelineDialog, type PipelineEditPayload } from "@/components/pipeline/EditPipelineDialog";
 import { hasPermission } from "@/lib/permissions";
 import { exportExcel } from "@/lib/excel";
 import { generateEntityCode } from "@/lib/entity-code";
@@ -51,6 +52,8 @@ export default function Pipelines() {
   const [selectedPipelineId, setSelectedPipelineId] = useState<number | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [showPipelineOverview, setShowPipelineOverview] = useState(false);
+  const [showEditPipeline, setShowEditPipeline] = useState(false);
+  const [editPipelineSaving, setEditPipelineSaving] = useState(false);
   const [candidates, setCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -98,6 +101,35 @@ export default function Pipelines() {
       toast.error("Aday aşaması güncellenemedi: " + (err.response?.data?.message || err.message || "Bilinmeyen hata"));
     } finally {
       setUpdatingProcessId(null);
+    }
+  };
+
+  const handleUpdatePipeline = async (payload: PipelineEditPayload) => {
+    if (!selectedPipeline) return;
+    setEditPipelineSaving(true);
+    try {
+      const retainedStageIds = new Set(payload.stages.flatMap((stage) => stage.id === null ? [] : [stage.id]));
+      const removedStages = selectedPipeline.stages.filter((stage) => !retainedStageIds.has(stage.id));
+      await Promise.all(removedStages.map((stage) => pipelineApi.deleteStage(selectedPipeline.id, stage.id)));
+      await pipelineApi.update(selectedPipeline.id, {
+        name: payload.name.trim(), description: payload.description.trim(), defaultPipeline: payload.defaultPipeline,
+      });
+      await Promise.all(payload.stages.map((stage, index) => stage.id === null
+        ? pipelineApi.addStage(selectedPipeline.id, {
+            name: stage.name.trim(), code: generateEntityCode(stage.name),
+            description: stage.description.trim(), displayOrder: index + 1, stageType: stage.stageType,
+          })
+        : pipelineApi.updateStage(selectedPipeline.id, stage.id, {
+            name: stage.name.trim(), description: stage.description.trim(), stageType: stage.stageType,
+          })));
+      await loadSummaries();
+      await loadPipelineDetail(selectedPipeline.id);
+      setShowEditPipeline(false);
+      toast.success("İşe alım süreci güncellendi.");
+    } catch (err: any) {
+      toast.error("Pipeline güncellenemedi: " + (err.response?.data?.message || err.message || "Bilinmeyen hata"));
+    } finally {
+      setEditPipelineSaving(false);
     }
   };
 
@@ -448,7 +480,8 @@ export default function Pipelines() {
                 type="button"
                 onClick={() => {
                   setSelectedPipelineId(pipeline.id);
-                  setShowPipelineOverview(true);
+                  if (canManagePipeline) setShowEditPipeline(true);
+                  else setShowPipelineOverview(true);
                 }}
                 className="flex items-center gap-2 px-3 py-2 whitespace-nowrap"
                 aria-label={`${pipeline.name} detaylarını göster`}
@@ -893,6 +926,14 @@ export default function Pipelines() {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      <EditPipelineDialog
+        open={showEditPipeline && canManagePipeline}
+        pipeline={selectedPipeline}
+        saving={editPipelineSaving || detailLoading}
+        onOpenChange={setShowEditPipeline}
+        onSave={handleUpdatePipeline}
+      />
 
       <StageChangeDialog
         open={Boolean(pendingStageChange)}

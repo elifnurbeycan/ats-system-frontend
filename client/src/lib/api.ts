@@ -1,131 +1,12 @@
-import axios, { AxiosInstance } from "axios";
+import { apiClient, authClient, platformClient, getCompanyId, getUserRole } from "@/lib/api/client";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
-
-// --- Auth Helpers ---
-
-function getAuthToken(): string | null {
-  return sessionStorage.getItem("auth_token");
-}
-
-function getCompanyId(): string {
-  // 1) Direct company_id key (set at login)
-  const direct = sessionStorage.getItem("company_id");
-  if (direct) return direct;
-
-  // 2) Fallback: parse from user_data (also set at login)
-  const raw = sessionStorage.getItem("user_data");
-  if (raw) {
-    try {
-      const user = JSON.parse(raw);
-      if (user.companyId) return String(user.companyId);
-    } catch {}
-  }
-
-  // 3) Last resort: env var (development only)
-  return import.meta.env.VITE_COMPANY_ID || "1";
-}
-
-function getUserRole(): string | null {
-  const raw = sessionStorage.getItem("user_data");
-  if (raw) {
-    try {
-      const user = JSON.parse(raw);
-      return user.role || null;
-    } catch {
-      return null;
-    }
-  }
-  return null;
-}
-
-// --- Auth API Client ---
-
-const authClient: AxiosInstance = axios.create({
-  baseURL: `${API_URL}/api/v1/auth`,
-  headers: {
-    Accept: "application/json",
-    "Content-Type": "application/json",
-  },
-});
-
-authClient.interceptors.request.use((config) => {
-  const token = getAuthToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// --- Platform API Client (Super Admin) ---
-
-const platformClient: AxiosInstance = axios.create({
-  baseURL: `${API_URL}/api/v1/platform`,
-  headers: {
-    Accept: "application/json",
-    "Content-Type": "application/json",
-  },
-});
-
-platformClient.interceptors.request.use((config) => {
-  const token = getAuthToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-platformClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      const currentPath = window.location.pathname;
-      if (currentPath !== "/login" && currentPath !== "/admin-login") {
-        sessionStorage.removeItem("auth_token");
-        sessionStorage.removeItem("refresh_token");
-        sessionStorage.removeItem("company_id");
-        sessionStorage.removeItem("user_data");
-        window.location.href = "/admin-login";
-      }
-    }
-    return Promise.reject(error);
-  }
-);
-
-// --- Company-scoped API Client ---
-
-const apiClient: AxiosInstance = axios.create({
-  baseURL: `${API_URL}/api/v1/companies`,
-  headers: {
-    Accept: "application/json",
-    "Content-Type": "application/json",
-  },
-});
-
-apiClient.interceptors.request.use((config) => {
-  const token = getAuthToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-apiClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      const currentPath = window.location.pathname;
-      if (currentPath !== "/login" && currentPath !== "/admin-login") {
-        sessionStorage.removeItem("auth_token");
-        sessionStorage.removeItem("refresh_token");
-        sessionStorage.removeItem("company_id");
-        sessionStorage.removeItem("user_data");
-        window.location.href = "/login";
-      }
-    }
-    return Promise.reject(error);
-  }
-);
+// Geriye dönük uyumluluk: mevcut ekranlar ana barrel üzerinden import etmeye devam edebilir.
+export { candidateApi } from "@/lib/api/candidate-api";
+export { candidateProcessApi } from "@/lib/api/process-api";
+export { departmentApi } from "@/lib/api/department-api";
+export { positionApi } from "@/lib/api/position-api";
+export { pipelineApi } from "@/lib/api/pipeline-api";
+export { authApi, platformAuthApi } from "@/lib/api/auth-api";
 
 // --- Types ---
 
@@ -143,6 +24,11 @@ export interface PageData<T> {
   totalPages: number;
   first: boolean;
   last: boolean;
+}
+
+// Liste endpointlerinin eski dizi ve yeni sayfalı yanıtlarını geçiş sürecinde güvenle destekler.
+function unwrapCollection<T>(data: T[] | PageData<T>): T[] {
+  return Array.isArray(data) ? data : data.content;
 }
 
 export interface TokenResponse {
@@ -217,6 +103,15 @@ export interface Candidate {
   currentJobTitle: string | null;
   noticePeriodDays: number | null;
   active: boolean;
+}
+
+export interface CandidateCv {
+  id: number;
+  candidateId: number;
+  fileName: string;
+  contentType: string;
+  fileSize: number;
+  uploadedAt: string;
 }
 
 export interface CandidateProcessSummary {
@@ -299,6 +194,7 @@ export interface PipelineStage {
   displayOrder: number;
   stageType: "ACTIVE" | "HIRED" | "REJECTED" | "ON_HOLD";
   active: boolean;
+  description?: string | null;
 }
 
 // Summary DTO (from GET /pipelines — no stages)
@@ -447,63 +343,15 @@ export interface UpdateUserRolesRequest {
   roleIds: number[];
 }
 
-// --- Auth API ---
-
-export const authApi = {
-  login: async (companyCode: string, email: string, password: string): Promise<TokenResponse> => {
-    const res = await authClient.post<ApiResponse<TokenResponse>>("/login", {
-      companyCode,
-      email,
-      password,
-    });
-    return res.data.data;
-  },
-  me: async (): Promise<AuthenticatedUser> => {
-    const res = await authClient.get<ApiResponse<AuthenticatedUser>>("/me");
-    return res.data.data;
-  },
-  refresh: async (refreshToken: string): Promise<TokenResponse> => {
-    const res = await authClient.post<ApiResponse<TokenResponse>>("/refresh", {
-      refreshToken,
-    });
-    return res.data.data;
-  },
-  logout: async (refreshToken: string): Promise<void> => {
-    await authClient.post("/logout", { refreshToken });
-  },
-};
-
-// --- Platform Admin API (Super Admin) ---
-
-export const platformAuthApi = {
-  login: async (email: string, password: string): Promise<TokenResponse> => {
-    const res = await authClient.post<ApiResponse<TokenResponse>>("/platform/login", {
-      email,
-      password,
-    });
-    return res.data.data;
-  },
-  me: async (): Promise<PlatformAdminResponse> => {
-    const res = await authClient.get<ApiResponse<PlatformAdminResponse>>("/platform/me");
-    return res.data.data;
-  },
-  refresh: async (refreshToken: string): Promise<TokenResponse> => {
-    const res = await authClient.post<ApiResponse<TokenResponse>>("/platform/refresh", {
-      refreshToken,
-    });
-    return res.data.data;
-  },
-  logout: async (refreshToken: string): Promise<void> => {
-    await authClient.post("/platform/logout", { refreshToken });
-  },
-};
 
 // --- Platform Company API (Super Admin) ---
 
 export const platformCompanyApi = {
   getAll: async (): Promise<CompanyResponse[]> => {
-    const res = await platformClient.get<ApiResponse<CompanyResponse[]>>("/companies");
-    return res.data.data;
+    const res = await platformClient.get<ApiResponse<CompanyResponse[] | PageData<CompanyResponse>>>("/companies", {
+      params: { size: 100 },
+    });
+    return unwrapCollection(res.data.data);
   },
   getById: async (companyId: number): Promise<CompanyResponse> => {
     const res = await platformClient.get<ApiResponse<CompanyResponse>>(`/companies/${companyId}`);
@@ -533,186 +381,8 @@ export const dashboardApi = {
   },
 };
 
-// --- Candidate API ---
-
-export const candidateApi = {
-  getAll: async (): Promise<Candidate[]> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.get<ApiResponse<{ content: Candidate[] }>>(`/${companyId}/candidates`);
-    return res.data.data.content;
-  },
-
-  getById: async (candidateId: number): Promise<CandidateDetail> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.get<ApiResponse<CandidateDetail>>(`/${companyId}/candidates/${candidateId}`);
-    return res.data.data;
-  },
-
-  update: async (candidateId: number, data: any): Promise<any> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.put<ApiResponse<any>>(`/${companyId}/candidates/${candidateId}`, data);
-    return res.data.data;
-  },
-
-  deactivate: async (candidateId: number): Promise<any> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.patch<ApiResponse<any>>(`/${companyId}/candidates/${candidateId}/deactivate`);
-    return res.data.data;
-  },
-};
 
 
-// --- Position API ---
-
-export const positionApi = {
-  getAll: async (departmentId?: number, status?: string): Promise<Position[]> => {
-    const companyId = getCompanyId();
-    const params: Record<string, any> = {};
-    if (departmentId) params.departmentId = departmentId;
-    if (status) params.status = status;
-    const res = await apiClient.get<ApiResponse<Position[]>>(`/${companyId}/positions`, { params });
-    return res.data.data;
-  },
-  getOpen: async (): Promise<PositionSummary[]> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.get<ApiResponse<PositionSummary[]>>(`/${companyId}/positions/open`);
-    return res.data.data;
-  },
-  getById: async (positionId: number): Promise<Position> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.get<ApiResponse<Position>>(`/${companyId}/positions/${positionId}`);
-    return res.data.data;
-  },
-  create: async (data: any): Promise<Position> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.post<ApiResponse<Position>>(`/${companyId}/positions`, data);
-    return res.data.data;
-  },
-  update: async (positionId: number, data: any): Promise<Position> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.put<ApiResponse<Position>>(`/${companyId}/positions/${positionId}`, data);
-    return res.data.data;
-  },
-  changeStatus: async (positionId: number, status: string): Promise<Position> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.patch<ApiResponse<Position>>(`/${companyId}/positions/${positionId}/status`, { status });
-    return res.data.data;
-  },
-};
-
-
-// --- Department API ---
-
-export const departmentApi = {
-  getAll: async (includeInactive: boolean = false): Promise<Department[]> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.get<ApiResponse<Department[]>>(`/${companyId}/departments`, {
-      params: { includeInactive },
-    });
-    return res.data.data;
-  },
-  getById: async (departmentId: number): Promise<Department> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.get<ApiResponse<Department>>(`/${companyId}/departments/${departmentId}`);
-    return res.data.data;
-  },
-  create: async (data: { name: string; code: string; description?: string }): Promise<Department> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.post<ApiResponse<Department>>(`/${companyId}/departments`, data);
-    return res.data.data;
-  },
-  deactivate: async (departmentId: number): Promise<Department> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.patch<ApiResponse<Department>>(`/${companyId}/departments/${departmentId}/deactivate`);
-    return res.data.data;
-  },
-  activate: async (departmentId: number): Promise<Department> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.patch<ApiResponse<Department>>(`/${companyId}/departments/${departmentId}/activate`);
-    return res.data.data;
-  },
-};
-
-// --- Pipeline API ---
-
-export const pipelineApi = {
-  getAll: async (): Promise<PipelineSummary[]> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.get<ApiResponse<PipelineSummary[]>>(`/${companyId}/pipelines`);
-    return res.data.data;
-  },
-  getById: async (pipelineId: number): Promise<Pipeline> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.get<ApiResponse<Pipeline>>(`/${companyId}/pipelines/${pipelineId}`);
-    return res.data.data;
-  },
-  create: async (data: any): Promise<Pipeline> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.post<ApiResponse<Pipeline>>(`/${companyId}/pipelines`, data);
-    return res.data.data;
-  },
-  deactivate: async (pipelineId: number): Promise<Pipeline> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.patch<ApiResponse<Pipeline>>(`/${companyId}/pipelines/${pipelineId}/deactivate`);
-    return res.data.data;
-  },
-};
-
-// --- Candidate Process API ---
-
-export const candidateProcessApi = {
-  create: async (data: {
-    firstName: string;
-    lastName: string;
-    linkedinUrl?: string;
-    positionId: number;
-    pipelineId: number;
-  }): Promise<any> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.post<ApiResponse<any>>(`/${companyId}/candidate-processes`, data);
-    return res.data.data;
-  },
-  getBoard: async (pipelineId: number, positionId: number): Promise<PipelineBoard> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.get<ApiResponse<PipelineBoard>>(
-      `/${companyId}/pipelines/${pipelineId}/positions/${positionId}/board`
-    );
-    return res.data.data;
-  },
-  changeStage: async (candidateProcessId: number, data: { stageId: number; reason?: string }): Promise<any> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.patch<ApiResponse<any>>(
-      `/${companyId}/candidate-processes/${candidateProcessId}/stage`,
-      data
-    );
-    return res.data.data;
-  },
-  getStageHistory: async (candidateProcessId: number): Promise<CandidateStageHistory[]> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.get<ApiResponse<any[]>>(
-      `/${companyId}/candidate-processes/${candidateProcessId}/stage-history`
-    );
-    return res.data.data;
-  },
-  getCompensation: async (candidateProcessId: number): Promise<CandidateCompensation> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.get<ApiResponse<CandidateCompensation>>(
-      `/${companyId}/candidate-processes/${candidateProcessId}/compensation`
-    );
-    return res.data.data;
-  },
-  updateCompensation: async (
-    candidateProcessId: number,
-    data: UpdateCandidateCompensationRequest
-  ): Promise<CandidateCompensation> => {
-    const companyId = getCompanyId();
-    const res = await apiClient.put<ApiResponse<CandidateCompensation>>(
-      `/${companyId}/candidate-processes/${candidateProcessId}/compensation`,
-      data
-    );
-    return res.data.data;
-  },
-};
 
 // --- User Management API ---
 

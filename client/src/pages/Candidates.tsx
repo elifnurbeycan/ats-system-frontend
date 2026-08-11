@@ -13,9 +13,22 @@ import {
   Pencil,
   Trash2,
   Download,
+  FileText,
+  Upload,
+  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { candidateApi, pipelineApi, positionApi, departmentApi, candidateProcessApi } from "@/lib/api";
+import type { CandidateCv } from "@/lib/api";
+import { candidateApi } from "@/lib/api/candidate-api";
+import { pipelineApi } from "@/lib/api/pipeline-api";
+import { positionApi } from "@/lib/api/position-api";
+import { departmentApi } from "@/lib/api/department-api";
+import { candidateProcessApi } from "@/lib/api/process-api";
+import { contactLeadApi } from "@/lib/api/contact-lead-api";
+import { CandidatePagination } from "@/components/candidate/CandidatePagination";
+import { CreateCandidateDialog } from "@/components/candidate/CreateCandidateDialog";
+import { DeleteCandidateDialog } from "@/components/candidate/DeleteCandidateDialog";
+import { EditCandidateDialog } from "@/components/candidate/EditCandidateDialog";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,14 +36,8 @@ import { CandidateIdentity } from "@/components/candidate/CandidateIdentity";
 import { LinkedInLink } from "@/components/candidate/LinkedInLink";
 import { hasPermission } from "@/lib/permissions";
 import { exportExcel } from "@/lib/excel";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { useApplicationContract } from "@/hooks/use-application-contract";
+import { formatFileSize, isAllowedFile } from "@/lib/api/application-contract";
 import {
   Select,
   SelectContent,
@@ -40,13 +47,20 @@ import {
 } from "@/components/ui/select";
 
 export default function Candidates() {
+  const applicationContract = useApplicationContract();
+  const candidatePageSize = applicationContract.pagination.defaultPageSize;
   const canCreateCandidate = hasPermission("CANDIDATE_CREATE");
   const canUpdateCandidate = hasPermission("CANDIDATE_UPDATE");
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<string>("ALL");
   const [selectedStageId, setSelectedStageId] = useState<string>("ALL");
   const [departmentFilter, setDepartmentFilter] = useState<string>("ALL");
-  const [sortField, setSortField] = useState<string>("name");
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [candidatePage, setCandidatePage] = useState(0);
+  const [candidateTotalPages, setCandidateTotalPages] = useState(0);
+  const [candidateTotalElements, setCandidateTotalElements] = useState(0);
+  const [serverSort, setServerSort] = useState("createdAt-desc");
+  const [sortField, setSortField] = useState<string>("");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   
   const [candidates, setCandidates] = useState<any[]>([]);
@@ -70,6 +84,9 @@ export default function Candidates() {
   // Edit Candidate Dialog State
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editCv, setEditCv] = useState<CandidateCv | null>(null);
+  const [editCvFile, setEditCvFile] = useState<File | null>(null);
+  const [editCvLoading, setEditCvLoading] = useState(false);
   const [editForm, setEditForm] = useState({
     id: null as number | null,
     firstName: "",
@@ -89,7 +106,7 @@ export default function Candidates() {
   const [deletingCandidateId, setDeletingCandidateId] = useState<number | null>(null);
   const [deletingCandidateName, setDeletingCandidateName] = useState("");
 
-  const handleOpenEdit = (c: any) => {
+  const handleOpenEdit = async (c: any) => {
     setEditForm({
       id: c.id,
       firstName: c.firstName || "",
@@ -102,7 +119,41 @@ export default function Candidates() {
       currentJobTitle: c.currentJobTitle || "",
       noticePeriodDays: c.noticePeriodDays != null ? c.noticePeriodDays : 0,
     });
+    setEditCv(null);
+    setEditCvFile(null);
     setShowEditDialog(true);
+    setEditCvLoading(true);
+    try {
+      setEditCv(await candidateApi.getCv(c.id));
+    } catch (err: any) {
+      toast.error("CV bilgisi yüklenemedi: " + (err.response?.data?.message || err.message));
+    } finally {
+      setEditCvLoading(false);
+    }
+  };
+
+  const handleCvSelection = (file?: File) => {
+    if (!file) return setEditCvFile(null);
+    if (!isAllowedFile(file, applicationContract.candidateCv)) {
+      toast.error(`CV yalnızca ${applicationContract.candidateCv.allowedExtensions.join(", ")} formatında yüklenebilir.`);
+      return;
+    }
+    if (file.size > applicationContract.candidateCv.maxFileSizeBytes) {
+      toast.error(`CV dosyası en fazla ${formatFileSize(applicationContract.candidateCv.maxFileSizeBytes)} olabilir.`);
+      return;
+    }
+    setEditCvFile(file);
+  };
+
+  const handleDeleteCv = async () => {
+    if (!editForm.id || !editCv || !window.confirm("Adayın CV dosyası silinsin mi?")) return;
+    try {
+      await candidateApi.deleteCv(editForm.id);
+      setEditCv(null);
+      toast.success("CV silindi.");
+    } catch (err: any) {
+      toast.error("CV silinemedi: " + (err.response?.data?.message || err.message));
+    }
   };
 
   const handleOpenDelete = (c: any) => {
@@ -132,6 +183,7 @@ export default function Candidates() {
       };
 
       await candidateApi.update(editForm.id, payload);
+      if (editCvFile) await candidateApi.uploadCv(editForm.id, editCvFile);
       toast.success("Aday bilgileri güncellendi.");
       setShowEditDialog(false);
       loadData();
@@ -159,6 +211,16 @@ export default function Candidates() {
     }
   };
 
+  const handleRestoreCandidate = async (candidateId: number) => {
+    try {
+      await candidateApi.activate(candidateId);
+      toast.success("Aday geri yüklendi.");
+      loadData();
+    } catch (err: any) {
+      toast.error("Aday geri yüklenemedi: " + (err.response?.data?.message || err.message || "Bilinmeyen hata"));
+    }
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -182,7 +244,17 @@ export default function Candidates() {
 
     // Load candidates separately — failures should be caught and logged
     try {
-      const candidatesData = await candidateApi.getAll();
+      const [sortBy, sortDirection] = serverSort.split("-") as ["name" | "createdAt", "asc" | "desc"];
+      const candidatePageData = await candidateApi.getPage({
+        includeInactive: showDeleted,
+        page: showDeleted ? 0 : candidatePage,
+        size: showDeleted ? applicationContract.pagination.maxPageSize : candidatePageSize,
+        sortBy,
+        sortDirection,
+      });
+      const candidatesData = candidatePageData.content;
+      setCandidateTotalPages(showDeleted ? 1 : candidatePageData.totalPages);
+      setCandidateTotalElements(candidatePageData.totalElements);
       const detailedCandidates = await Promise.all(
         candidatesData.map(async (c) => {
           try {
@@ -203,7 +275,7 @@ export default function Candidates() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [candidatePage, showDeleted, serverSort, candidatePageSize, applicationContract.pagination.maxPageSize]);
 
   useEffect(() => {
     try {
@@ -306,11 +378,13 @@ export default function Candidates() {
       const matchesSelectedStage =
         selectedStageId === "ALL" || String(c.stage?.id) === selectedStageId;
 
-      return matchesSearch && matchesStage && matchesSelectedStage;
+      const matchesDeleted = showDeleted ? !c.active : c.active;
+
+      return matchesSearch && matchesStage && matchesSelectedStage && matchesDeleted;
     });
 
-    // Sort
-    result.sort((a, b) => {
+    // Tablo başlığıyla ayrıca sıralama seçilmişse mevcut sayfa üzerinde uygula.
+    if (sortField) result.sort((a, b) => {
       let valA: string, valB: string;
       switch (sortField) {
         case "name":
@@ -342,7 +416,16 @@ export default function Candidates() {
     });
 
     return result;
-  }, [departmentCandidates, search, stageFilter, selectedStageId, sortField, sortDir]);
+  }, [departmentCandidates, search, stageFilter, selectedStageId, showDeleted, sortField, sortDir]);
+
+  const visiblePageNumbers = useMemo(() => {
+    if (candidateTotalPages <= 7) {
+      return Array.from({ length: candidateTotalPages }, (_, index) => index);
+    }
+
+    const start = Math.max(0, Math.min(candidatePage - 2, candidateTotalPages - 5));
+    return Array.from({ length: 5 }, (_, index) => start + index);
+  }, [candidatePage, candidateTotalPages]);
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -385,14 +468,14 @@ export default function Candidates() {
 
     setSubmitting(true);
     try {
-      await candidateProcessApi.create({
+      await contactLeadApi.create({
         firstName,
         lastName,
         linkedinUrl: createForm.linkedinUrl || undefined,
         positionId: parseInt(positionId),
         pipelineId: parseInt(pipelineId),
       });
-      toast.success("Aday başarıyla eklendi.");
+      toast.success("Kişi iletişim havuzuna eklendi. Olumlu dönüşten sonra aday süreci başlayacak.");
       setShowCreateDialog(false);
       setCreateForm({
         firstName: "",
@@ -442,7 +525,7 @@ export default function Candidates() {
             Adaylar
           </h1>
           <p className="text-muted-foreground mt-1">
-            {filtered.length} başvuru listeleniyor
+            {showDeleted ? filtered.length : candidateTotalElements} aday listeleniyor
           </p>
         </div>
         <div className="flex flex-wrap justify-end gap-2">
@@ -564,7 +647,39 @@ export default function Candidates() {
             ))}
           </SelectContent>
         </Select>
+        <Select
+          value={serverSort}
+          onValueChange={(value) => {
+            setServerSort(value);
+            setCandidatePage(0);
+            setSortField("");
+          }}
+        >
+          <SelectTrigger className="w-full sm:w-52">
+            <SelectValue placeholder="Sıralama" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="createdAt-desc">En son eklenen</SelectItem>
+            <SelectItem value="createdAt-asc">En eski eklenen</SelectItem>
+            <SelectItem value="name-asc">Ada göre A-Z</SelectItem>
+            <SelectItem value="name-desc">Ada göre Z-A</SelectItem>
+          </SelectContent>
+        </Select>
         <div className="flex items-center gap-2 overflow-x-auto">
+          {canUpdateCandidate && (
+            <button
+              onClick={() => {
+                setShowDeleted((value) => !value);
+                setCandidatePage(0);
+              }}
+              className={cn(
+                "rounded-xl px-3 py-2.5 text-sm font-medium whitespace-nowrap border transition-colors",
+                showDeleted ? "border-primary/30 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {showDeleted ? "Aktif adaylar" : "Silinen adaylar"}
+            </button>
+          )}
           {stageFilters.map((f) => (
             <button
               key={f.value}
@@ -730,19 +845,26 @@ export default function Candidates() {
                         <Link href={`/adaylar/${candidate.id}`} title="Detayları Görüntüle">
                           <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors cursor-pointer" />
                         </Link>
-                        {canUpdateCandidate && <button
+                        {canUpdateCandidate && candidate.active && <button
                           onClick={() => handleOpenEdit(candidate)}
                           className="text-muted-foreground hover:text-primary transition-colors p-0.5 rounded hover:bg-accent"
                           title="Adayı Düzenle"
                         >
                           <Pencil className="h-4 w-4" />
                         </button>}
-                        {canUpdateCandidate && <button
+                        {canUpdateCandidate && candidate.active && <button
                           onClick={() => handleOpenDelete(candidate)}
                           className="text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded hover:bg-accent"
                           title="Adayı sil"
                         >
                           <Trash2 className="h-4 w-4" />
+                        </button>}
+                        {canUpdateCandidate && !candidate.active && <button
+                          onClick={() => handleRestoreCandidate(candidate.id)}
+                          className="text-muted-foreground hover:text-primary transition-colors p-0.5 rounded hover:bg-accent"
+                          title="Adayı geri yükle"
+                        >
+                          <RotateCcw className="h-4 w-4" />
                         </button>}
                       </div>
                     </td>
@@ -758,290 +880,44 @@ export default function Candidates() {
             <p className="text-muted-foreground">Aday bulunamadı.</p>
           </div>
         )}
+        {!showDeleted && <CandidatePagination page={candidatePage} totalPages={candidateTotalPages} loading={loading} onPageChange={setCandidatePage} />}
       </div>
 
-      {/* New Candidate Dialog */}
-      <Dialog open={showCreateDialog && canCreateCandidate} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="sm:max-w-[480px]">
-          <DialogHeader>
-            <DialogTitle>Yeni Aday Ekle</DialogTitle>
-            <DialogDescription>
-              Adayı sisteme kaydedin ve işe alım sürecine dahil edin.
-            </DialogDescription>
-          </DialogHeader>
+      <CreateCandidateDialog
+        open={showCreateDialog && canCreateCandidate}
+        form={createForm}
+        departments={departments}
+        positions={createPositions}
+        pipelines={pipelines}
+        submitting={submitting}
+        onOpenChange={setShowCreateDialog}
+        onFormChange={setCreateForm}
+        onSave={handleCreateCandidate}
+      />
+      <EditCandidateDialog
+        open={showEditDialog && canUpdateCandidate}
+        form={editForm}
+        cv={editCv}
+        cvFile={editCvFile}
+        cvLoading={editCvLoading}
+        submitting={editSubmitting}
+        cvContract={applicationContract.candidateCv}
+        onOpenChange={setShowEditDialog}
+        onFormChange={setEditForm}
+        onCvSelection={handleCvSelection}
+        onCvDownload={() => editForm.id && editCv && candidateApi.downloadCv(editForm.id, editCv.fileName)}
+        onCvDelete={handleDeleteCv}
+        onSave={handleEditCandidate}
+      />
 
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Adı *</label>
-                <Input
-                  value={createForm.firstName}
-                  onChange={(e) => setCreateForm({ ...createForm, firstName: e.target.value })}
-                  placeholder="Ahmet"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Soyadı *</label>
-                <Input
-                  value={createForm.lastName}
-                  onChange={(e) => setCreateForm({ ...createForm, lastName: e.target.value })}
-                  placeholder="Yılmaz"
-                />
-              </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">LinkedIn Profil Adresi</label>
-              <Input
-                value={createForm.linkedinUrl}
-                onChange={(e) => setCreateForm({ ...createForm, linkedinUrl: e.target.value })}
-                placeholder="https://linkedin.com/in/username"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Departman *</label>
-              <Select
-                value={createForm.departmentId}
-                onValueChange={(val) =>
-                  setCreateForm({ ...createForm, departmentId: val, positionId: "" })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Departman seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {departments.length === 0 ? (
-                    <SelectItem value="none" disabled>Aktif departman bulunmuyor</SelectItem>
-                  ) : (
-                    departments.map((department) => (
-                      <SelectItem key={department.id} value={String(department.id)}>
-                        {department.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Başvurulan Pozisyon *</label>
-              <Select
-                value={createForm.positionId}
-                onValueChange={(val) => setCreateForm({ ...createForm, positionId: val })}
-                disabled={!createForm.departmentId}
-              >
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={createForm.departmentId ? "Pozisyon seçin" : "Önce departman seçin"}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {createPositions.length === 0 ? (
-                    <SelectItem value="none" disabled>Bu departmanda açık pozisyon bulunmuyor</SelectItem>
-                  ) : (
-                    createPositions.map((p) => (
-                      <SelectItem key={p.id} value={String(p.id)}>
-                        {p.title}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Süreç Pipeline *</label>
-              <Select
-                value={createForm.pipelineId}
-                onValueChange={(val) => setCreateForm({ ...createForm, pipelineId: val })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pipeline seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {pipelines.length === 0 ? (
-                    <SelectItem value="none" disabled>Pipeline bulunmuyor</SelectItem>
-                  ) : (
-                    pipelines.map((p) => (
-                      <SelectItem key={p.id} value={String(p.id)}>
-                        {p.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-              İptal
-            </Button>
-            <Button
-              onClick={handleCreateCandidate}
-              disabled={submitting}
-              className="bg-primary hover:bg-primary/95 text-white"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Ekleniyor
-                </>
-              ) : (
-                "Kaydet"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Candidate Dialog */}
-      <Dialog open={showEditDialog && canUpdateCandidate} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-[540px]">
-          <DialogHeader>
-            <DialogTitle>Aday Bilgilerini Düzenle</DialogTitle>
-            <DialogDescription>
-              Adayın profil bilgilerini güncelleyin.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-1">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Adı *</label>
-              <Input
-                value={editForm.firstName}
-                onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
-                placeholder="Adı"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Soyadı *</label>
-              <Input
-                value={editForm.lastName}
-                onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
-                placeholder="Soyadı"
-              />
-            </div>
-
-            <div className="space-y-1.5 col-span-2">
-              <label className="text-sm font-medium">LinkedIn Profil Adresi</label>
-              <Input
-                value={editForm.linkedinUrl}
-                onChange={(e) => setEditForm({ ...editForm, linkedinUrl: e.target.value })}
-                placeholder="https://linkedin.com/in/username"
-              />
-            </div>
-
-            <div className="space-y-1.5 col-span-2">
-              <label className="text-sm font-medium">E-posta</label>
-              <Input
-                type="email"
-                value={editForm.email}
-                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                placeholder="example@mail.com"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Telefon</label>
-              <Input
-                value={editForm.phone}
-                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                placeholder="+90 555..."
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Şehir</label>
-              <Input
-                value={editForm.city}
-                onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
-                placeholder="İstanbul"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Mevcut Şirket</label>
-              <Input
-                value={editForm.currentCompany}
-                onChange={(e) => setEditForm({ ...editForm, currentCompany: e.target.value })}
-                placeholder="Mevcut Şirket"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Mevcut Unvan</label>
-              <Input
-                value={editForm.currentJobTitle}
-                onChange={(e) => setEditForm({ ...editForm, currentJobTitle: e.target.value })}
-                placeholder="Geliştirici"
-              />
-            </div>
-
-            <div className="space-y-1.5 col-span-2">
-              <label className="text-sm font-medium">İhbar Süresi (Gün)</label>
-              <Input
-                type="number"
-                value={editForm.noticePeriodDays}
-                onChange={(e) => setEditForm({ ...editForm, noticePeriodDays: e.target.value })}
-                placeholder="30"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
-              İptal
-            </Button>
-            <Button
-              onClick={handleEditCandidate}
-              disabled={editSubmitting}
-              className="bg-primary hover:bg-primary/95 text-white"
-            >
-              {editSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Kaydediliyor
-                </>
-              ) : (
-                "Değişiklikleri Kaydet"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Candidate Confirmation Dialog */}
-      <Dialog open={showDeleteDialog && canUpdateCandidate} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="sm:max-w-[420px]">
-          <DialogHeader>
-            <DialogTitle>Adayı Sil</DialogTitle>
-            <DialogDescription>
-              <strong>{deletingCandidateName}</strong> isimli adayı silmek istediğinize emin misiniz? Bu aday süreç listelerinden kaldırılacaktır.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              İptal
-            </Button>
-            <Button
-              onClick={handleDeactivateCandidate}
-              disabled={deleteSubmitting}
-              variant="destructive"
-            >
-              {deleteSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Siliniyor
-                </>
-              ) : (
-                "Evet, Sil"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteCandidateDialog
+        open={showDeleteDialog && canUpdateCandidate}
+        candidateName={deletingCandidateName}
+        submitting={deleteSubmitting}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={handleDeactivateCandidate}
+      />
     </div>
   );
 }
