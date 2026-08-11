@@ -14,7 +14,7 @@ const turkishCharacters: Record<string, string> = {
 };
 
 export function generateEntityCode(name: string): string {
-  const asciiName = [...name]
+  const asciiName = Array.from(name)
     .map((character) => turkishCharacters[character] ?? character)
     .join("")
     .normalize("NFD")

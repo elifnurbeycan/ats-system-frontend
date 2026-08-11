@@ -15,6 +15,7 @@ import {
   UserCog,
   Moon,
   Sun,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { authApi, type AuthenticatedUser } from "@/lib/api";
@@ -34,6 +35,16 @@ function getNavItems(role: string) {
     { path: "/departmanlar", label: "Departmanlar", icon: Building2, roles: ALL_ROLES },
     { path: "/ise-alim-sureci", label: "İşe Alım Süreci", icon: GitBranch, roles: ALL_ROLES },
   ];
+
+  // İlk temas havuzu yalnızca İK ekibinin çalışma alanıdır.
+  if (["HR", "RECRUITER"].includes(role)) {
+    base.splice(2, 0, {
+      path: "/iletisim",
+      label: "İletişim",
+      icon: MessageCircle,
+      roles: ["HR", "RECRUITER"],
+    });
+  }
 
   // Kullanıcı Yönetimi sadece COMPANY_ADMIN için
   if (role === "COMPANY_ADMIN") {

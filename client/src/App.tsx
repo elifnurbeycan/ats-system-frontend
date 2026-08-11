@@ -12,6 +12,7 @@ import Positions from "./pages/Positions";
 import PositionDetail from "./pages/PositionDetail";
 import Departments from "./pages/Departments";
 import Pipelines from "./pages/Pipelines";
+import Communications from "./pages/Communications";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
@@ -107,6 +108,13 @@ function AppRouter() {
             </DashboardLayout>
           </AuthGuard>
         )}
+      </Route>
+      <Route path="/iletisim">
+        <AuthGuard>
+          <DashboardLayout>
+            <Communications />
+          </DashboardLayout>
+        </AuthGuard>
       </Route>
       <Route path="/pozisyonlar">
         <AuthGuard>
