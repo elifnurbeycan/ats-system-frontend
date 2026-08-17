@@ -289,7 +289,7 @@ export default function Candidates() {
   }, []);
 
   const allStages = useMemo(() => {
-    return pipelines.flatMap(p => p.stages || []);
+    return pipelines.flatMap(p => (p.stages || []).filter((stage: any) => stage.active !== false));
   }, [pipelines]);
 
   const candidatesWithStage = useMemo(() => {
