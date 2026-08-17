@@ -191,7 +191,9 @@ export default function Pipelines() {
 
   const stages = useMemo(() => {
     if (!selectedPipeline?.stages) return [];
-    return [...selectedPipeline.stages].sort((a, b) => a.displayOrder - b.displayOrder);
+    return selectedPipeline.stages
+      .filter((stage: any) => stage.active !== false)
+      .sort((a, b) => a.displayOrder - b.displayOrder);
   }, [selectedPipeline]);
 
 

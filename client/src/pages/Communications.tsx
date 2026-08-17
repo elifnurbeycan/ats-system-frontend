@@ -34,6 +34,7 @@ export default function Communications() {
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<ContactLeadStatus | "ALL">("CONTACTING");
+  const [rejectionReasonFilter, setRejectionReasonFilter] = useState<ContactRejectionReason | "ALL">("ALL");
   const [selected, setSelected] = useState<ContactLead | null>(null);
   const [resolution, setResolution] = useState<ContactResolution>("WAITING");
   const [channel, setChannel] = useState<InteractionChannel>("LINKEDIN");
@@ -53,12 +54,13 @@ export default function Communications() {
 
   const loadData = () => contactLeadApi.getPage({
     page, size: 12, search: search.trim() || undefined, status: status === "ALL" ? undefined : status,
+    rejectionReason: rejectionReasonFilter === "ALL" ? undefined : rejectionReasonFilter,
   }).then(setData).catch((error) => toast.error(error.response?.data?.message || "İletişim kayıtları yüklenemedi."));
 
   useEffect(() => {
     const timer = window.setTimeout(loadData, 250);
     return () => window.clearTimeout(timer);
-  }, [page, search, status]);
+  }, [page, search, status, rejectionReasonFilter]);
 
   const openResult = (lead: ContactLead) => {
     setSelected(lead); setResolution("WAITING"); setChannel(lead.contactChannel || "LINKEDIN");
@@ -86,9 +88,22 @@ export default function Communications() {
   return <div className="space-y-6">
     <div><h1 className="text-2xl font-bold text-foreground">İletişim</h1><p className="mt-1 text-sm text-muted-foreground">İlk temasları yönetin; olumlu dönüş alan kişileri aday sürecine aktarın.</p></div>
     <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-      <div className="flex flex-wrap gap-3 border-b border-border p-4">
+      <div className="space-y-3 border-b border-border p-4">
+        <div className="flex flex-wrap gap-2" aria-label="İletişim durumu filtresi">
+          {([
+            ["CONTACTING", "İletişimde"],
+            ["REJECTED", "Reddedilenler"],
+            ["CONVERTED", "Aday sürecine alınanlar"],
+            ["ALL", "Tümü"],
+          ] as const).map(([value, label]) => <button key={value} type="button" onClick={() => {
+            setStatus(value); setPage(0);
+            if (value !== "REJECTED" && value !== "ALL") setRejectionReasonFilter("ALL");
+          }} className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${status === value ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:bg-muted"}`}>{label}</button>)}
+        </div>
+        <div className="flex flex-wrap gap-3">
         <div className="relative min-w-[280px] flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} placeholder="Ad, LinkedIn veya pozisyon ara..." className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none focus:border-primary" /></div>
-        <select value={status} onChange={(e) => { setStatus(e.target.value as ContactLeadStatus | "ALL"); setPage(0); }} className="rounded-xl border border-border bg-background px-3 text-sm"><option value="CONTACTING">İletişimde</option><option value="CONVERTED">Aday sürecine alınanlar</option><option value="REJECTED">Reddedilenler</option><option value="ALL">Tümü</option></select>
+        {(status === "REJECTED" || status === "ALL") && <select aria-label="Ret nedenine göre filtrele" value={rejectionReasonFilter} onChange={(e) => { setRejectionReasonFilter(e.target.value as ContactRejectionReason | "ALL"); setPage(0); }} className="rounded-xl border border-border bg-background px-3 text-sm"><option value="ALL">Tüm ret nedenleri</option>{Object.entries(rejectionLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>}
+        </div>
       </div>
       <div className="overflow-x-auto"><table className="w-full min-w-[1100px] text-left text-sm">
         <thead className="border-b border-border bg-muted/35 text-xs uppercase text-muted-foreground"><tr><th className="px-5 py-3">Kişi</th><th className="px-5 py-3">Pozisyon / Departman</th><th className="px-5 py-3">LinkedIn</th><th className="px-5 py-3">Durum</th><th className="px-5 py-3">Ret nedeni</th><th className="px-5 py-3">Not</th><th className="px-5 py-3 text-right">İşlemler</th></tr></thead>
