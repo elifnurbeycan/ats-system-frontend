@@ -13,9 +13,12 @@ import {
   Loader2,
   CalendarDays,
   FilePlus2,
+  MessageCircle,
+  Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { dashboardApi, candidateApi, type DashboardData } from "@/lib/api";
+import { contactLeadApi, type ContactRejectionReason } from "@/lib/api/contact-lead-api";
 import { toast } from "sonner";
 import {
   Area,
@@ -33,6 +36,11 @@ export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [recentCandidates, setRecentCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [contactStats, setContactStats] = useState({ contacting: 0, converted: 0, rejected: 0 });
+  const [contactRejectionStats, setContactRejectionStats] = useState<Record<ContactRejectionReason, number>>({
+    NO_RESPONSE: 0, NOT_INTERESTED: 0, POSITION_MISMATCH: 0, SALARY_EXPECTATION: 0,
+    LOCATION: 0, TIMING: 0, ACCEPTED_ANOTHER_OFFER: 0, OTHER: 0,
+  });
   const [analysisPeriod, setAnalysisPeriod] = useState<"weekly" | "monthly" | "allTime">("weekly");
 
   useEffect(() => {
@@ -62,6 +70,34 @@ export default function Dashboard() {
         setRecentCandidates(detailedCandidates);
       } catch {
         // Silent — candidates widget will just be empty
+      }
+
+      try {
+        const roles = JSON.parse(sessionStorage.getItem("user_data") || "{}").roles || [];
+        if (roles.some((role: string) => role === "HR" || role === "RECRUITER")) {
+          const [contacting, converted, rejected] = await Promise.all([
+            contactLeadApi.getPage({ page: 0, size: 1, status: "CONTACTING" }),
+            contactLeadApi.getPage({ page: 0, size: 1, status: "CONVERTED" }),
+            contactLeadApi.getPage({ page: 0, size: 1, status: "REJECTED" }),
+          ]);
+          setContactStats({
+            contacting: contacting.totalElements,
+            converted: converted.totalElements,
+            rejected: rejected.totalElements,
+          });
+          const rejectionReasons: ContactRejectionReason[] = [
+            "NO_RESPONSE", "NOT_INTERESTED", "POSITION_MISMATCH", "SALARY_EXPECTATION",
+            "LOCATION", "TIMING", "ACCEPTED_ANOTHER_OFFER", "OTHER",
+          ];
+          const reasonPages = await Promise.all(rejectionReasons.map((rejectionReason) =>
+            contactLeadApi.getPage({ page: 0, size: 1, status: "REJECTED", rejectionReason }),
+          ));
+          setContactRejectionStats(Object.fromEntries(rejectionReasons.map((reason, index) =>
+            [reason, reasonPages[index].totalElements],
+          )) as Record<ContactRejectionReason, number>);
+        }
+      } catch {
+        // İletişim modülü yetkisi olmayan kullanıcılarda panel gösterilmez.
       } finally {
         setLoading(false);
       }
@@ -143,6 +179,31 @@ export default function Dashboard() {
       trend: `Oran: %${stats.hireRate}`,
     },
   ];
+
+  const canViewCommunications = (() => {
+    try {
+      const roles = JSON.parse(sessionStorage.getItem("user_data") || "{}").roles || [];
+      return roles.some((role: string) => role === "HR" || role === "RECRUITER");
+    } catch {
+      return false;
+    }
+  })();
+  const resolvedContacts = contactStats.converted + contactStats.rejected;
+  const positiveContactRate = resolvedContacts > 0
+    ? Math.round((contactStats.converted / resolvedContacts) * 100)
+    : 0;
+  const rejectionReasonLabels: Record<ContactRejectionReason, string> = {
+    NO_RESPONSE: "Yanıt alınamadı",
+    NOT_INTERESTED: "İlgilenmiyor",
+    POSITION_MISMATCH: "Pozisyon uygun değil",
+    SALARY_EXPECTATION: "Maaş beklentisi uyuşmadı",
+    LOCATION: "Konum / çalışma modeli",
+    TIMING: "Zamanlama uygun değil",
+    ACCEPTED_ANOTHER_OFFER: "Başka bir teklifi kabul etti",
+    OTHER: "Diğer",
+  };
+  const rejectionReasonRows = (Object.entries(contactRejectionStats) as [ContactRejectionReason, number][])
+    .sort(([, firstCount], [, secondCount]) => secondCount - firstCount);
 
   const periodAnalytics = analysisPeriod === "weekly"
     ? data?.weeklyAnalytics
@@ -238,6 +299,51 @@ export default function Dashboard() {
           );
         })}
       </div>
+
+      {canViewCommunications && <section className="enterprise-panel overflow-hidden animate-slide-up" style={{ animationDelay: "210ms" }}>
+        <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="section-title">İletişim Havuzu</h2>
+            <p className="mt-1 text-xs text-muted-foreground">İlk temasların güncel durumu ve aday sürecine dönüşümü</p>
+          </div>
+          <Link href="/iletisim" className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
+            İletişim kayıtlarını aç <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        </div>
+        <div className="grid sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            { label: "İletişimde bekleyen", value: contactStats.contacting, icon: MessageCircle, tone: "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300" },
+            { label: "Aday sürecine alınan", value: contactStats.converted, icon: UserCheck, tone: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" },
+            { label: "İletişimde reddedilen", value: contactStats.rejected, icon: XCircle, tone: "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300" },
+            { label: "Olumlu dönüş oranı", value: `%${positiveContactRate}`, icon: Send, tone: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300" },
+          ].map((metric) => {
+            const Icon = metric.icon;
+            return <div key={metric.label} className="flex items-center gap-3 border-b border-border p-4 last:border-b-0 sm:border-r xl:border-b-0 xl:last:border-r-0">
+              <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", metric.tone)}><Icon className="h-5 w-5" /></div>
+              <div><p className="text-xs text-muted-foreground">{metric.label}</p><p className="mt-0.5 font-mono text-2xl font-bold text-foreground">{metric.value}</p></div>
+            </div>;
+          })}
+        </div>
+        <div className="flex flex-col gap-2 border-t border-border bg-muted/15 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-muted-foreground">Olumlu dönüş oranı, sonuçlanan iletişimlerden aday sürecine aktarılanların oranıdır.</p>
+          <div className="flex items-center gap-3"><div className="h-1.5 w-32 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${positiveContactRate}%` }} /></div><span className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">%{positiveContactRate}</span></div>
+        </div>
+        <div className="border-t border-border p-5">
+          <div className="mb-4">
+            <h3 className="text-sm font-semibold text-foreground">İletişim ret nedenleri</h3>
+            <p className="mt-1 text-xs text-muted-foreground">İletişim aşamasında reddedilen kişilerin neden dağılımı</p>
+          </div>
+          {contactStats.rejected === 0 ? <div className="rounded-xl border border-dashed border-border py-8 text-center text-sm text-muted-foreground">Henüz reddedilmiş iletişim kaydı bulunmuyor.</div> : <div className="overflow-hidden rounded-xl border border-border">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-muted/35 text-xs uppercase text-muted-foreground"><tr><th className="px-4 py-3">Ret nedeni</th><th className="w-24 px-4 py-3 text-right">Kayıt</th><th className="w-[38%] px-4 py-3">Dağılım</th></tr></thead>
+              <tbody className="divide-y divide-border">{rejectionReasonRows.map(([reason, count]) => {
+                const percentage = contactStats.rejected > 0 ? Math.round((count / contactStats.rejected) * 100) : 0;
+                return <tr key={reason} className="hover:bg-muted/20"><td className="px-4 py-3 font-medium text-foreground">{rejectionReasonLabels[reason]}</td><td className="px-4 py-3 text-right font-mono font-semibold text-foreground">{count}</td><td className="px-4 py-3"><div className="flex items-center gap-3"><div className="h-2 flex-1 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-rose-500" style={{ width: `${percentage}%` }} /></div><span className="w-10 text-right font-mono text-xs font-semibold text-muted-foreground">%{percentage}</span></div></td></tr>;
+              })}</tbody>
+            </table>
+          </div>}
+        </div>
+      </section>}
 
       {/* Period analytics */}
       <section className="enterprise-panel overflow-hidden animate-slide-up" style={{ animationDelay: "240ms" }}>
