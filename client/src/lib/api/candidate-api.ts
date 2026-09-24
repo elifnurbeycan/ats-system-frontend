@@ -1,5 +1,5 @@
 import { apiClient, getCompanyId } from "./client";
-import type { ApiResponse, Candidate, CandidateCv, CandidateDetail, PageData } from "../api";
+import type { ApiResponse, Candidate, CandidateCv, CandidateDetail, CandidateNote, PageData } from "../api";
 
 export const candidateApi = {
   getPage: async (options: { includeInactive?: boolean; page?: number; size?: number; search?: string;
@@ -49,5 +49,21 @@ export const candidateApi = {
   },
   deleteCv: async (candidateId: number): Promise<void> => {
     await apiClient.delete(`/${getCompanyId()}/candidates/${candidateId}/cv`);
+  },
+  getNotes: async (candidateId: number, candidateProcessId?: number): Promise<CandidateNote[]> => {
+    const res = await apiClient.get<ApiResponse<PageData<CandidateNote>>>(`/${getCompanyId()}/candidates/${candidateId}/notes`, { params: { candidateProcessId, page: 0, size: 100 } });
+    return res.data.data.content;
+  },
+  createNote: async (candidateId: number, content: string, candidateProcessId?: number): Promise<CandidateNote> => {
+    const res = await apiClient.post<ApiResponse<CandidateNote>>(`/${getCompanyId()}/candidates/${candidateId}/notes`, { content, candidateProcessId: candidateProcessId ?? null });
+    return res.data.data;
+  },
+  getEvaluations: async (candidateId: number, candidateProcessId?: number): Promise<CandidateNote[]> => {
+    const res = await apiClient.get<ApiResponse<PageData<CandidateNote>>>(`/${getCompanyId()}/candidates/${candidateId}/notes/evaluations`, { params: { candidateProcessId, page: 0, size: 100 } });
+    return res.data.data.content;
+  },
+  createEvaluation: async (candidateId: number, content: string, candidateProcessId?: number): Promise<CandidateNote> => {
+    const res = await apiClient.post<ApiResponse<CandidateNote>>(`/${getCompanyId()}/candidates/${candidateId}/notes/evaluations`, { content, candidateProcessId: candidateProcessId ?? null });
+    return res.data.data;
   },
 };

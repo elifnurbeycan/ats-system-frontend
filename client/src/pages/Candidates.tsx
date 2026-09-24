@@ -46,6 +46,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+const formatResultDate = (value?: string | null) => {
+  if (!value) return null;
+
+  return new Date(value).toLocaleString("tr-TR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+};
+
 export default function Candidates() {
   const applicationContract = useApplicationContract();
   const candidatePageSize = applicationContract.pagination.defaultPageSize;
@@ -312,7 +321,7 @@ export default function Candidates() {
         const matchedStage = allStages.find(s => s.id === process.currentStageId);
         const stage = matchedStage
           ? { id: matchedStage.id, name: matchedStage.name, stageType: matchedStage.stageType }
-          : { id: process.currentStageId, name: process.currentStageName, stageType: "ACTIVE" };
+          : { id: process.currentStageId, name: process.currentStageName, stageType: process.currentStageType || "ACTIVE" };
         const positionDetails = positions.find(p => p.id === process.positionId);
         const position = {
           title: process.positionTitle,
@@ -328,7 +337,8 @@ export default function Candidates() {
           pipelineId: process.pipelineId,
           pipelineName: process.pipelineName,
           stage,
-          stageType: matchedStage?.stageType || "ACTIVE",
+          stageType: matchedStage?.stageType || process.currentStageType || "ACTIVE",
+          completedAt: process.completedAt,
           position,
         };
       });
@@ -453,6 +463,7 @@ export default function Candidates() {
       "Pipeline": candidate.pipelineName,
       "Aşama": candidate.stage?.name,
       "Süreç Durumu": candidate.stageType === "HIRED" ? "İşe Alındı" : candidate.stageType === "REJECTED" ? "Reddedildi" : candidate.stageType === "ON_HOLD" ? "Beklemede" : "Aktif",
+      "Sonuç Zamanı": formatResultDate(candidate.completedAt) || "",
       "LinkedIn": candidate.linkedinUrl,
       "İhbar Süresi (Gün)": candidate.noticePeriodDays,
     })), "aday-raporu", "Adaylar");
@@ -737,6 +748,9 @@ export default function Candidates() {
                     Aşama <SortIcon field="stage" />
                   </button>
                 </th>
+                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-4 whitespace-nowrap">
+                  Sonuç Zamanı
+                </th>
                 <th className="px-5 py-4 w-28 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">İşlemler</th>
               </tr>
             </thead>
@@ -834,6 +848,22 @@ export default function Candidates() {
                             ? candidate.stage.name.split(" /")[0]
                             : candidate.stage.name}
                         </span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground/40">—</span>
+                      )}
+                    </td>
+
+                    {/* Sonuç zamanı */}
+                    <td className="px-5 py-3.5">
+                      {candidate.completedAt && (candidate.stageType === "HIRED" || candidate.stageType === "REJECTED") ? (
+                        <div className="min-w-[120px]">
+                          <div className="text-xs font-medium text-foreground">
+                            {formatResultDate(candidate.completedAt)}
+                          </div>
+                          <div className="mt-0.5 text-[11px] text-muted-foreground">
+                            {candidate.stageType === "HIRED" ? "İşe alım zamanı" : "Red zamanı"}
+                          </div>
+                        </div>
                       ) : (
                         <span className="text-sm text-muted-foreground/40">—</span>
                       )}

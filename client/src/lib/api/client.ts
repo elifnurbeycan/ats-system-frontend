@@ -1,4 +1,13 @@
-import axios, { type AxiosInstance } from "axios";
+import axios, {
+  type AxiosInstance,
+  type InternalAxiosRequestConfig,
+} from "axios";
+import {
+  keycloak,
+  keycloakEnabled,
+  logoutFromKeycloak,
+  saveKeycloakSession,
+} from "../keycloak";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -39,6 +48,14 @@ function createClient(baseURL: string, loginPath: "/login" | "/admin-login"): Ax
   });
 
   client.interceptors.request.use((config) => {
+    if (keycloakEnabled) {
+      // Keycloak etkinse legacy sessionStorage tokenına geri düşme.
+      // Böylece eski oturum tokenı yeni SSO oturumuna taşınamaz.
+      if (keycloak.token) {
+        config.headers.Authorization = `Bearer ${keycloak.token}`;
+      }
+      return config;
+    }
     const token = getAuthToken();
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
@@ -48,12 +65,39 @@ function createClient(baseURL: string, loginPath: "/login" | "/admin-login"): Ax
     (response) => response,
     async (error) => {
       if (error.response?.status === 401) {
+        const originalRequest = error.config as
+          | (InternalAxiosRequestConfig & { _keycloakRetry?: boolean })
+          | undefined;
+
+        if (
+          keycloakEnabled &&
+          keycloak.authenticated &&
+          originalRequest &&
+          !originalRequest._keycloakRetry
+        ) {
+          originalRequest._keycloakRetry = true;
+          try {
+            await keycloak.updateToken(30);
+            saveKeycloakSession();
+            if (keycloak.token) {
+              originalRequest.headers.Authorization = `Bearer ${keycloak.token}`;
+              return client(originalRequest);
+            }
+          } catch {
+            // Token yenilenemezse aşağıdaki merkezi oturum kapatma akışı çalışır.
+          }
+        }
+
         const currentPath = window.location.pathname;
         if (currentPath !== "/login" && currentPath !== "/admin-login") {
-          ["auth_token", "refresh_token", "company_id", "user_data"].forEach((key) =>
-            sessionStorage.removeItem(key),
-          );
-          window.location.href = loginPath;
+          if (keycloakEnabled) {
+            void logoutFromKeycloak(`${window.location.origin}${loginPath}`);
+          } else {
+            ["auth_token", "refresh_token", "company_id", "user_data"].forEach((key) =>
+              sessionStorage.removeItem(key),
+            );
+            window.location.href = loginPath;
+          }
         }
       }
       return Promise.reject(error);

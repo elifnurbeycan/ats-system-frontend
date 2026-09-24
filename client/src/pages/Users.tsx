@@ -205,10 +205,12 @@ export default function Users() {
             Şirket kullanıcılarını yönetin, rol atayın
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)} className="bg-[#1e3a5f] hover:bg-[#2a4a6f]">
-          <Plus className="w-4 h-4 mr-2" />
-          Yeni Kullanıcı
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setShowCreateDialog(true)} className="bg-[#1e3a5f] hover:bg-[#2a4a6f]">
+            <Plus className="w-4 h-4 mr-2" />
+            Yeni Kullanıcı
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}

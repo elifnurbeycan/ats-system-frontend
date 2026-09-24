@@ -13,6 +13,7 @@ import {
   Menu,
   GitBranch,
   UserCog,
+  ShieldCheck,
   Moon,
   Sun,
   MessageCircle,
@@ -20,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { authApi, type AuthenticatedUser } from "@/lib/api";
 import { toast } from "sonner";
+import { keycloak, keycloakEnabled, logoutFromKeycloak } from "@/lib/keycloak";
 import { useTheme } from "@/contexts/ThemeContext";
 
 // Rol bazlı menü tanımı
@@ -52,6 +54,12 @@ function getNavItems(role: string) {
       path: "/kullanicilar",
       label: "Kullanıcılar",
       icon: UserCog,
+      roles: ["COMPANY_ADMIN"],
+    });
+    base.push({
+      path: "/roller",
+      label: "Roller",
+      icon: ShieldCheck,
       roles: ["COMPANY_ADMIN"],
     });
   }
@@ -136,6 +144,11 @@ export default function DashboardLayout({
   const navItems = getNavItems(userRole);
 
   const handleLogout = async () => {
+    if (keycloakEnabled && keycloak.authenticated) {
+      toast.success("Çıkış yapıldı");
+      await logoutFromKeycloak(`${window.location.origin}/login`);
+      return;
+    }
     const refreshToken = sessionStorage.getItem("refresh_token");
     try {
       if (refreshToken) {
