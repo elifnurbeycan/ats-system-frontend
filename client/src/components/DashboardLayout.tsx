@@ -28,7 +28,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 // - COMPANY_ADMIN: Tüm menüler + Kullanıcı Yönetimi
 // - RECRUITER (İK): Adaylar, Pozisyonlar, Departmanlar, İşe Alım Süreci, Ayarlar
 // - HIRING_MANAGER (Müdür): Adaylar, Pozisyonlar, Departmanlar, İşe Alım Süreci
-function getNavItems(role: string) {
+function getNavItems(role: string, permissions: string[] = []) {
   const ALL_ROLES = ["COMPANY_ADMIN", "HR", "RECRUITER", "GENERAL_MANAGER", "DEPARTMENT_MANAGER", "HIRING_MANAGER", "INTERVIEWER"];
   const base = [
     { path: "/", label: "Kontrol Paneli", icon: LayoutDashboard, roles: ALL_ROLES },
@@ -39,7 +39,7 @@ function getNavItems(role: string) {
   ];
 
   // İlk temas havuzu yalnızca İK ekibinin çalışma alanıdır.
-  if (["HR", "RECRUITER"].includes(role)) {
+  if (permissions.includes("CONTACT_LEAD_VIEW")) {
     base.splice(2, 0, {
       path: "/iletisim",
       label: "İletişim",
@@ -105,9 +105,10 @@ function getInitials(fullName: string): string {
     .slice(0, 2);
 }
 
-function getRoleLabel(roles: string[]): string {
+function getRoleLabel(roles: string[], roleNames: Record<string, string> = {}): string {
   if (!roles || roles.length === 0) return "Kullanıcı";
   const role = roles[0];
+  if (roleNames[role]) return roleNames[role];
   switch (role) {
     case "COMPANY_ADMIN": return "Şirket Yöneticisi";
     case "HR": return "İnsan Kaynakları";
@@ -141,7 +142,7 @@ export default function DashboardLayout({
   }, [location, navigate]);
 
   const userRole = user?.roles?.[0] || "RECRUITER";
-  const navItems = getNavItems(userRole);
+  const navItems = getNavItems(userRole, user?.permissions || []);
 
   const handleLogout = async () => {
     if (keycloakEnabled && keycloak.authenticated) {
@@ -272,7 +273,7 @@ export default function DashboardLayout({
                     {user?.fullName || "Yükleniyor..."}
                   </p>
                   <p className="text-[11px] text-muted-foreground truncate">
-                    {getRoleLabel(user?.roles || [])}
+                    {getRoleLabel(user?.roles || [], user?.roleNames || {})}
                   </p>
                 </div>
               )}

@@ -14,6 +14,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   USER: "Kullanıcılar", DEPARTMENT: "Departmanlar", POSITION: "Pozisyonlar",
   CANDIDATE: "Adaylar", CANDIDATE_PROCESS: "Aday süreçleri", COMPENSATION: "Ücret bilgileri",
   CANDIDATE_NOTE: "Aday notları", CANDIDATE_EVALUATION: "Aday değerlendirmeleri",
+  CONTACT_LEAD: "İletişim havuzu",
   INTERVIEW: "Görüşmeler", PIPELINE: "İşe alım akışı", AUDIT: "Denetim kayıtları",
 };
 

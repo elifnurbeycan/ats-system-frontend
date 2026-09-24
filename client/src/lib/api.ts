@@ -47,6 +47,7 @@ export interface AuthenticatedUser {
   departmentId: number | null;
   roles: string[];
   permissions: string[];
+  roleNames?: Record<string, string>;
 }
 
 export interface PlatformAdminResponse {
@@ -453,6 +454,14 @@ export const userApi = {
   activate: async (userId: number): Promise<UserResponse> => {
     const companyId = getCompanyId();
     const res = await apiClient.patch<ApiResponse<UserResponse>>(`/${companyId}/users/${userId}/activate`);
+    return res.data.data;
+  },
+  resetPassword: async (userId: number, temporaryPassword: string): Promise<UserResponse> => {
+    const companyId = getCompanyId();
+    const res = await apiClient.post<ApiResponse<UserResponse>>(
+      `/${companyId}/users/${userId}/reset-password`,
+      { temporaryPassword },
+    );
     return res.data.data;
   },
 };
