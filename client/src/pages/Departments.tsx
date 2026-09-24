@@ -52,19 +52,21 @@ export default function Departments() {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Load core data first — must not fail
-      const [deptsData, positionsData, pipelinesData] = await Promise.all([
-        departmentApi.getAll(),
+      // Departman listesi tek başına yüklenir. Aday/pozisyon kapsamı olmayan
+      // bir İK rolü, departman ekranını diğer endpoint'lerden gelen 403/500
+      // yüzünden boş görmemelidir.
+      const deptsData = await departmentApi.getAll();
+      setDepartments(deptsData);
+
+      const [positionsResult, pipelinesResult] = await Promise.allSettled([
         positionApi.getAll(),
         pipelineApi.getAll(),
       ]);
-
-      setDepartments(deptsData);
-      setPositions(positionsData);
-      setPipelines(pipelinesData);
+      setPositions(positionsResult.status === "fulfilled" ? positionsResult.value : []);
+      setPipelines(pipelinesResult.status === "fulfilled" ? pipelinesResult.value : []);
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || "Bilinmeyen hata";
-      toast.error("Veriler yüklenemedi: " + msg);
+      toast.error("Departmanlar yüklenemedi: " + msg);
     } finally {
       setLoading(false);
     }

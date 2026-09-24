@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import type { PageData } from "@/lib/api";
 import type { InteractionChannel } from "@/lib/api/interaction-api";
 import { exportExcel } from "@/lib/excel";
+import { hasPermission } from "@/lib/permissions";
 import {
   contactLeadApi,
   type ContactLead,
@@ -51,15 +52,12 @@ export default function Communications() {
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [, navigate] = useLocation();
-
-  const roles = (() => {
-    try { return JSON.parse(sessionStorage.getItem("user_data") || "{}").roles || []; }
-    catch { return []; }
-  })();
+  const canView = hasPermission("CONTACT_LEAD_VIEW");
+  const canResolve = hasPermission("CONTACT_LEAD_RESOLVE");
 
   useEffect(() => {
-    if (!roles.some((role: string) => role === "HR" || role === "RECRUITER")) navigate("/");
-  }, [navigate]);
+    if (!canView) navigate("/");
+  }, [canView, navigate]);
 
   const loadData = () => contactLeadApi.getPage({
     page, size: 12, search: search.trim() || undefined, status: status === "ALL" ? undefined : status,
@@ -133,6 +131,8 @@ export default function Communications() {
     }
   };
 
+  if (!canView) return null;
+
   return <div className="space-y-6">
     <div className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-2xl font-bold text-foreground">İletişim</h1><p className="mt-1 text-sm text-muted-foreground">İlk temasları yönetin; olumlu dönüş alan kişileri aday sürecine aktarın.</p></div><button type="button" disabled={exporting} onClick={exportCommunications} className="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-950/70"><Download className="h-4 w-4" />{exporting ? "Hazırlanıyor..." : "Excel'e Aktar"}</button></div>
     <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -163,12 +163,12 @@ export default function Communications() {
           <td className="px-5 py-3 text-muted-foreground">{lead.rejectionReason ? rejectionLabels[lead.rejectionReason] : "—"}</td>
           <td className="max-w-[260px] truncate px-5 py-3 text-muted-foreground" title={lead.note || undefined}>{lead.note || "—"}</td>
           <td className="whitespace-nowrap px-5 py-3 text-muted-foreground"><div>{formatDateTime(lead.resolvedAt)}</div>{lead.resolvedAt && <div className="mt-0.5 text-xs">{lead.status === "REJECTED" ? "Red zamanı" : lead.status === "CONVERTED" ? "Aday sürecine alınma" : "Son güncelleme"}</div>}</td>
-          <td className="px-5 py-3 text-right">{lead.status === "CONTACTING" && <button onClick={() => openResult(lead)} className="inline-flex items-center gap-2 rounded-lg border border-primary/30 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/10"><MessageCircle className="h-4 w-4" /> Sonuç gir</button>}</td>
+          <td className="px-5 py-3 text-right">{canResolve && lead.status === "CONTACTING" && <button onClick={() => openResult(lead)} className="inline-flex items-center gap-2 rounded-lg border border-primary/30 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/10"><MessageCircle className="h-4 w-4" /> Sonuç gir</button>}</td>
         </tr>)}{data && data.content.length === 0 && <tr><td colSpan={8} className="py-12 text-center text-muted-foreground">İletişim kaydı bulunamadı.</td></tr>}</tbody>
       </table></div>
       {data && <div className="flex items-center justify-between border-t border-border px-4 py-3 text-sm"><span className="text-muted-foreground">Sayfa {data.page + 1} / {Math.max(data.totalPages, 1)} · {data.totalElements} kayıt</span><div className="flex gap-2"><button disabled={data.first} onClick={() => setPage((p) => p - 1)} className="rounded-lg border px-3 py-1.5 disabled:opacity-40">Önceki</button><button disabled={data.last} onClick={() => setPage((p) => p + 1)} className="rounded-lg border px-3 py-1.5 disabled:opacity-40">Sonraki</button></div></div>}
     </div>
-    {selected && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><div className="w-full max-w-lg rounded-2xl border border-border bg-card shadow-xl">
+    {selected && canResolve && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><div className="w-full max-w-lg rounded-2xl border border-border bg-card shadow-xl">
       <div className="flex items-center justify-between border-b p-5"><div><h2 className="font-semibold">İletişim sonucunu kaydet</h2><p className="text-sm text-muted-foreground">{selected.fullName} · {selected.positionTitle}</p></div><button onClick={() => setSelected(null)}><X className="h-5 w-5" /></button></div>
       <div className="space-y-4 p-5">
         <label className="block text-sm font-medium">Sonuç<select value={resolution} onChange={(e) => { setResolution(e.target.value as ContactResolution); setRejectionReason(""); }} className="mt-1.5 w-full rounded-lg border border-border bg-background p-2.5"><option value="WAITING">İletişim sürüyor / yanıt bekleniyor</option><option value="POSITIVE">Olumlu dönüş — aday sürecine al</option><option value="REJECTED">Reddedildi</option></select></label>

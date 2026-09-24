@@ -167,6 +167,23 @@ export default function Users() {
     }
   };
 
+  const handleResetPassword = async (user: UserResponse) => {
+    const temporaryPassword = window.prompt(
+      `${user.fullName} için Keycloak geçici parolasını girin (en az 12 karakter):`,
+    );
+    if (temporaryPassword === null) return;
+    if (temporaryPassword.length < 12) {
+      toast.error("Geçici şifre en az 12 karakter olmalıdır");
+      return;
+    }
+    try {
+      await userApi.resetPassword(user.id, temporaryPassword);
+      toast.success("Parola Keycloak'ta yenilendi. İlk girişte değiştirilmesi istenecek.");
+    } catch (err: any) {
+      toast.error("Parola yenilenemedi: " + (err.response?.data?.message || err.message));
+    }
+  };
+
   const handleRoleChange = async (userId: number, newRoleIds: number[]) => {
     try {
       await userApi.updateRoles(userId, { roleIds: newRoleIds });
@@ -187,12 +204,16 @@ export default function Users() {
     }
   };
 
-  const getRoleBadgeLabel = (roleCode: string) => {
-    switch (roleCode) {
+  const getRoleBadgeLabel = (role: RoleResponse) => {
+    switch (role.code) {
       case "COMPANY_ADMIN": return "Şirket Yöneticisi";
       case "RECRUITER": return "İK / İşe Alım";
       case "HIRING_MANAGER": return "İşe Alım Yöneticisi";
-      default: return roleCode;
+      case "HR": return "İnsan Kaynakları";
+      case "GENERAL_MANAGER": return "Genel Müdür";
+      case "DEPARTMENT_MANAGER": return "Departman Yöneticisi";
+      case "INTERVIEWER": return "Görüşmeci";
+      default: return role.name || role.code;
     }
   };
 
@@ -305,7 +326,7 @@ export default function Users() {
                       <div className="flex flex-wrap gap-1">
                         {user.roles.map((role) => (
                           <Badge key={role.id} variant={getRoleBadgeVariant(role.code) as any}>
-                            {getRoleBadgeLabel(role.code)}
+                            {getRoleBadgeLabel(role)}
                           </Badge>
                         ))}
                       </div>
@@ -363,6 +384,13 @@ export default function Users() {
                             Aktifleştir
                           </Button>
                         )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleResetPassword(user)}
+                        >
+                          Şifreyi sıfırla
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>

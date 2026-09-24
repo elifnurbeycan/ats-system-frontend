@@ -58,7 +58,8 @@ const formatResultDate = (value?: string | null) => {
 export default function Candidates() {
   const applicationContract = useApplicationContract();
   const candidatePageSize = applicationContract.pagination.defaultPageSize;
-  const canCreateCandidate = hasPermission("CANDIDATE_CREATE");
+  // Yeni aday akışı önce iletişim havuzuna kayıt oluşturur.
+  const canCreateCandidate = hasPermission("CONTACT_LEAD_CREATE");
   const canUpdateCandidate = hasPermission("CANDIDATE_UPDATE");
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<string>("ALL");
