@@ -28,7 +28,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { CandidateCv, CandidateDetail, CandidateStageHistory } from "@/lib/api";
+import type { CandidateCv, CandidateDetail, CandidateNote, CandidateStageHistory } from "@/lib/api";
 import { candidateApi } from "@/lib/api/candidate-api";
 import { pipelineApi } from "@/lib/api/pipeline-api";
 import { candidateProcessApi } from "@/lib/api/process-api";
@@ -49,7 +49,11 @@ export default function CandidateDetail() {
   const canUpdateCompensation = hasPermission("CANDIDATE_COMPENSATION_UPDATE");
   const { id } = useParams();
   const candidateId = parseInt(id || "0");
-  const [activeTab, setActiveTab] = useState<"profil" | "surec" | "notlar">("profil");
+  const [activeTab, setActiveTab] = useState<"profil" | "surec" | "notlar" | "degerlendirmeler">("profil");
+  const canViewNotes = hasPermission("CANDIDATE_NOTE_VIEW");
+  const canCreateNote = hasPermission("CANDIDATE_NOTE_CREATE");
+  const canViewEvaluations = hasPermission("CANDIDATE_EVALUATION_VIEW");
+  const canCreateEvaluation = hasPermission("CANDIDATE_EVALUATION_CREATE");
 
   const [detail, setDetail] = useState<CandidateDetail | null>(null);
   const [pipelines, setPipelines] = useState<any[]>([]);
@@ -82,6 +86,43 @@ export default function CandidateDetail() {
   const [compensationForm, setCompensationForm] = useState({
     currentSalary: "", expectedSalary: "", offeredSalary: "", salaryCurrency: "TRY",
   });
+  const [candidateNotes, setCandidateNotes] = useState<CandidateNote[]>([]);
+  const [candidateEvaluations, setCandidateEvaluations] = useState<CandidateNote[]>([]);
+  const [entryText, setEntryText] = useState("");
+  const [entrySaving, setEntrySaving] = useState(false);
+  const candidate = detail?.candidate;
+  const processes = detail?.processes || [];
+  const selectedProcess = processes.find((process) => process.id === selectedProcessId) || processes[0];
+
+  useEffect(() => {
+    if (!candidateId) return;
+    let active = true;
+    const processId = selectedProcess?.id;
+    Promise.all([
+      canViewNotes ? candidateApi.getNotes(candidateId, processId) : Promise.resolve([]),
+      canViewEvaluations ? candidateApi.getEvaluations(candidateId, processId) : Promise.resolve([]),
+    ]).then(([notes, evaluations]) => {
+      if (active) { setCandidateNotes(notes); setCandidateEvaluations(evaluations); }
+    }).catch(() => { if (active) { setCandidateNotes([]); setCandidateEvaluations([]); } });
+    return () => { active = false; };
+  }, [candidateId, selectedProcess?.id, canViewNotes, canViewEvaluations]);
+
+  const saveEntry = async (kind: "NOTE" | "EVALUATION") => {
+    const content = entryText.trim();
+    if (!content || !candidate) return toast.error("İçerik alanı zorunludur.");
+    setEntrySaving(true);
+    try {
+      if (kind === "NOTE") await candidateApi.createNote(candidate.id, content, selectedProcess?.id);
+      else await candidateApi.createEvaluation(candidate.id, content, selectedProcess?.id);
+      setEntryText("");
+      const processId = selectedProcess?.id;
+      if (kind === "NOTE") setCandidateNotes(await candidateApi.getNotes(candidate.id, processId));
+      else setCandidateEvaluations(await candidateApi.getEvaluations(candidate.id, processId));
+      toast.success(kind === "NOTE" ? "Aday notu eklendi." : "Aday değerlendirmesi eklendi.");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Kayıt eklenemedi.");
+    } finally { setEntrySaving(false); }
+  };
 
   const loadCandidateData = async () => {
     setLoading(true);
@@ -109,10 +150,6 @@ export default function CandidateDetail() {
       loadCandidateData();
     }
   }, [candidateId]);
-
-  const candidate = detail?.candidate;
-  const processes = detail?.processes || [];
-  const selectedProcess = processes.find((process) => process.id === selectedProcessId) || processes[0];
 
   useEffect(() => {
     if (processes.length > 0 && !processes.some((process) => process.id === selectedProcessId)) {
@@ -198,14 +235,46 @@ export default function CandidateDetail() {
     return progressStages.findIndex((s) => s.id === currentStage.id);
   }, [currentStage, progressStages]);
 
+  const stageCompletionTimes = useMemo(() => {
+    const completionTimes = new Map<number, string>();
+    const progressIndexById = new Map(
+      progressStages.map((stage, index) => [stage.id, index]),
+    );
+
+    stageHistory.forEach((history) => {
+      if (history.fromStageId == null) return;
+
+      const fromIndex = progressIndexById.get(history.fromStageId);
+      const toIndex = progressIndexById.get(history.toStageId);
+
+      // Beklemeye alma, reddetme veya geriye taşıma bir aşamanın
+      // başarıyla tamamlandığı anlamına gelmez.
+      if (fromIndex != null && toIndex != null && toIndex > fromIndex) {
+        completionTimes.set(history.fromStageId, history.changedAt);
+      }
+    });
+
+    if (
+      selectedProcess?.completedAt &&
+      currentStage?.stageType === "HIRED" &&
+      progressIndexById.has(currentStage.id)
+    ) {
+      completionTimes.set(currentStage.id, selectedProcess.completedAt);
+    }
+
+    return completionTimes;
+  }, [stageHistory, progressStages, selectedProcess?.completedAt, currentStage]);
+
+  const formatStageCompletionTime = (value: string) =>
+    new Date(value).toLocaleString("tr-TR", {
+      dateStyle: "short",
+      timeStyle: "short",
+    });
+
   // Stage progress helper
   const getStageStatus = (stageId: number) => {
-    if (!currentStage) return "future";
-    const currentOrder = progressStages.find(s => s.id === currentStage.id)?.displayOrder || 0;
-    const thisOrder = progressStages.find(s => s.id === stageId)?.displayOrder || 0;
-
-    if (thisOrder < currentOrder) return "completed";
-    if (thisOrder === currentOrder) return "current";
+    if (stageCompletionTimes.has(stageId)) return "completed";
+    if (currentStage?.id === stageId) return "current";
     return "future";
   };
 
@@ -436,7 +505,8 @@ export default function CandidateDetail() {
           {[
             { key: "profil" as const, label: "Profil", icon: FileText },
             { key: "surec" as const, label: "Süreç İlerleyişi", icon: CheckCircle2 },
-            { key: "notlar" as const, label: "Notlar", icon: MessageSquare },
+            ...(canViewNotes ? [{ key: "notlar" as const, label: "Notlar", icon: MessageSquare }] : []),
+            ...(canViewEvaluations ? [{ key: "degerlendirmeler" as const, label: "Değerlendirmeler", icon: Star }] : []),
           ].map((tab) => (
             <button
               key={tab.key}
@@ -503,6 +573,7 @@ export default function CandidateDetail() {
                     >
                       {progressStages.map((stage, i) => {
                         const status = getStageStatus(stage.id);
+                        const completionTime = stageCompletionTimes.get(stage.id);
                         return (
                           <div key={stage.id} className="relative flex min-w-0 flex-col items-center px-1">
                             {i < progressStages.length - 1 && (
@@ -534,6 +605,12 @@ export default function CandidateDetail() {
                               >
                                 {stage.name}
                               </span>
+                              {completionTime && (
+                                <span className="min-h-7 text-center text-[9px] leading-tight text-muted-foreground xl:text-[10px]">
+                                  Tamamlandı<br />
+                                  {formatStageCompletionTime(completionTime)}
+                                </span>
+                              )}
                             </div>
                           </div>
                         );
@@ -553,6 +630,20 @@ export default function CandidateDetail() {
                           style={{ width: `${Math.max(((currentStageIndex + 1) / progressStages.length) * 100, 0)}%` }}
                         />
                       </div>
+                      {stageCompletionTimes.size > 0 && (
+                        <div className="mt-3 space-y-1.5 rounded-lg border border-border bg-muted/15 p-3">
+                          {progressStages
+                            .filter((stage) => stageCompletionTimes.has(stage.id))
+                            .map((stage) => (
+                              <div key={stage.id} className="flex items-start justify-between gap-3 text-xs">
+                                <span className="font-medium text-foreground">{stage.name}</span>
+                                <span className="shrink-0 text-right text-muted-foreground">
+                                  {formatStageCompletionTime(stageCompletionTimes.get(stage.id)!)}
+                                </span>
+                              </div>
+                            ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Stage actions */}
@@ -760,6 +851,25 @@ export default function CandidateDetail() {
                     <p className="mt-1 text-xs text-muted-foreground">Aşamayı değiştirirken eklediğiniz notlar burada görünür.</p>
                   </div>
                 )}
+              </div>
+
+              <div className="glass rounded-xl p-5">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div><h3 className="font-display font-semibold text-foreground">Aday Notları</h3><p className="mt-1 text-xs text-muted-foreground">Bu başvuruya ekip üyeleri tarafından eklenen notlar.</p></div>
+                  <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">{candidateNotes.length} kayıt</span>
+                </div>
+                {canCreateNote && <div className="mb-4 space-y-2"><textarea value={entryText} onChange={event => setEntryText(event.target.value)} placeholder="Aday hakkında not ekleyin..." className="min-h-20 w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none" /><div className="flex justify-end"><button type="button" onClick={() => void saveEntry("NOTE")} disabled={entrySaving || !entryText.trim()} className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">Not ekle</button></div></div>}
+                <div className="space-y-2">{candidateNotes.map(note => <div key={note.id} className="rounded-lg border border-border bg-muted/15 p-3"><p className="whitespace-pre-wrap text-sm text-foreground">{note.content}</p><p className="mt-2 text-xs text-muted-foreground">{new Date(note.createdAt).toLocaleString("tr-TR")}</p></div>)}{!candidateNotes.length && <p className="text-sm text-muted-foreground">Henüz aday notu eklenmemiş.</p>}</div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "degerlendirmeler" && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="glass rounded-xl p-5"><h3 className="font-display font-semibold text-foreground">Ekip Değerlendirmeleri</h3><p className="mt-1 text-xs text-muted-foreground">Örneğin ekip lideri, adayla ilgili görüşünü bu alanda paylaşabilir.</p></div>
+              <div className="glass rounded-xl p-5">
+                {canCreateEvaluation && <div className="mb-4 space-y-2"><textarea value={entryText} onChange={event => setEntryText(event.target.value)} placeholder="Aday değerlendirmesini yazın..." className="min-h-28 w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none" /><div className="flex justify-end"><button type="button" onClick={() => void saveEntry("EVALUATION")} disabled={entrySaving || !entryText.trim()} className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">Değerlendirme ekle</button></div></div>}
+                <div className="space-y-3">{candidateEvaluations.map(evaluation => <div key={evaluation.id} className="rounded-lg border border-border bg-muted/15 p-4"><div className="flex items-center gap-2 text-sm font-medium"><Star className="h-4 w-4 text-amber-500" /> Ekip değerlendirmesi</div><p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{evaluation.content}</p><p className="mt-2 text-xs text-muted-foreground">{new Date(evaluation.createdAt).toLocaleString("tr-TR")}</p></div>)}{!candidateEvaluations.length && <p className="text-sm text-muted-foreground">Henüz değerlendirme eklenmemiş.</p>}</div>
               </div>
             </div>
           )}

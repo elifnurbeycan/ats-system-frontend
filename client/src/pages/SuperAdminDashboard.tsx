@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
+import { keycloak, keycloakEnabled, logoutFromKeycloak } from "@/lib/keycloak";
 import { platformCompanyApi, platformAuthApi } from "@/lib/api";
 import type { CompanyResponse, CreateCompanyRequest, PlatformAdminResponse } from "@/lib/api";
 
@@ -127,6 +128,11 @@ export default function SuperAdminDashboard() {
   };
 
   const handleLogout = async () => {
+    if (keycloakEnabled && keycloak.authenticated) {
+      toast.success("Çıkış yapıldı");
+      await logoutFromKeycloak(`${window.location.origin}/admin-login`);
+      return;
+    }
     const refreshToken = sessionStorage.getItem("refresh_token");
     if (refreshToken) {
       try {

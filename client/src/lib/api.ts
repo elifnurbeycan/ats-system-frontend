@@ -308,6 +308,36 @@ export interface RoleResponse {
   name: string;
   description: string;
   dataScope: string;
+  systemRole: boolean;
+  permissions: PermissionResponse[];
+}
+
+export interface CandidateNote {
+  id: number;
+  candidateId: number;
+  candidateProcessId: number | null;
+  entryType: "NOTE" | "EVALUATION";
+  content: string;
+  createdBy: number | null;
+  createdAt: string;
+  updatedAt: string;
+  active: boolean;
+}
+
+export interface PermissionResponse {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  category: string;
+  displayOrder: number;
+}
+
+export interface SaveRoleRequest {
+  name: string;
+  description?: string;
+  dataScope: "COMPANY" | "DEPARTMENT" | "ASSIGNED";
+  permissions: string[];
 }
 
 export interface UserResponse {
@@ -434,5 +464,24 @@ export const roleApi = {
     const companyId = getCompanyId();
     const res = await apiClient.get<ApiResponse<RoleResponse[]>>(`/${companyId}/roles`);
     return res.data.data;
+  },
+  getPermissions: async (): Promise<PermissionResponse[]> => {
+    const companyId = getCompanyId();
+    const res = await apiClient.get<ApiResponse<PermissionResponse[]>>(`/${companyId}/roles/permissions`);
+    return res.data.data;
+  },
+  create: async (data: SaveRoleRequest): Promise<RoleResponse> => {
+    const companyId = getCompanyId();
+    const res = await apiClient.post<ApiResponse<RoleResponse>>(`/${companyId}/roles`, data);
+    return res.data.data;
+  },
+  update: async (roleId: number, data: SaveRoleRequest): Promise<RoleResponse> => {
+    const companyId = getCompanyId();
+    const res = await apiClient.put<ApiResponse<RoleResponse>>(`/${companyId}/roles/${roleId}`, data);
+    return res.data.data;
+  },
+  deactivate: async (roleId: number): Promise<void> => {
+    const companyId = getCompanyId();
+    await apiClient.patch(`/${companyId}/roles/${roleId}/deactivate`);
   },
 };

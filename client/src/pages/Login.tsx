@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Building2, LogIn, Shield, Eye, EyeOff } from "lucide-react";
+import { keycloakEnabled, loginWithKeycloak } from "@/lib/keycloak";
 
 export default function Login() {
   const [, navigate] = useLocation();
@@ -63,7 +64,12 @@ export default function Login() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {keycloakEnabled ? (
+              <Button type="button" className="w-full mb-4" onClick={() => loginWithKeycloak()}>
+                Keycloak ile giriş yap
+              </Button>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="companyCode">Şirket Kodu</Label>
                 <Input
@@ -138,7 +144,8 @@ export default function Login() {
                   Platform Yönetici Girişi
                 </a>
               </div>
-            </form>
+              </form>
+            )}
           </CardContent>
         </Card>
       </div>

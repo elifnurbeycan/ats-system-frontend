@@ -14,12 +14,14 @@ import Departments from "./pages/Departments";
 import Pipelines from "./pages/Pipelines";
 import Communications from "./pages/Communications";
 import Users from "./pages/Users";
+import Roles from "./pages/Roles";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import AdminLogin from "./pages/AdminLogin";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import CompanyDetail from "./pages/CompanyDetail";
 import NotFound from "./pages/NotFound";
+import { keycloak, keycloakEnabled } from "./lib/keycloak";
 
 function AuthGuard({ children, requiredRole }: { children: React.ReactNode; requiredRole?: string }) {
   const [location, navigate] = useLocation();
@@ -27,7 +29,7 @@ function AuthGuard({ children, requiredRole }: { children: React.ReactNode; requ
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    const token = sessionStorage.getItem("auth_token");
+    const token = keycloakEnabled ? keycloak.authenticated : sessionStorage.getItem("auth_token");
     const userData = sessionStorage.getItem("user_data");
 
     if (!token || !userData) {
@@ -150,6 +152,13 @@ function AppRouter() {
         <AuthGuard>
           <DashboardLayout>
             <Users />
+          </DashboardLayout>
+        </AuthGuard>
+      </Route>
+      <Route path="/roller">
+        <AuthGuard>
+          <DashboardLayout>
+            <Roles />
           </DashboardLayout>
         </AuthGuard>
       </Route>
