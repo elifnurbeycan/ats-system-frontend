@@ -199,7 +199,7 @@ export default function Communications() {
         "Kişi": lead.fullName,
         "Pozisyon": lead.positionTitle,
         "Departman": lead.departmentName,
-        "Pipeline": lead.pipelineName,
+        "İşe alım süreci": lead.pipelineName,
         "LinkedIn": lead.linkedinUrl,
         "Durum": statusLabels[lead.status],
         "İletişim Kanalı": lead.contactChannel ? channelLabels[lead.contactChannel] : "",

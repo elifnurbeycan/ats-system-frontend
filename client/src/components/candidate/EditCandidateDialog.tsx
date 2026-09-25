@@ -16,14 +16,14 @@ export function EditCandidateDialog({ open, form, cv, cvFile, cvLoading, cvContr
   onCvSelection, onCvDownload, onCvDelete, onSave }: Props) {
   const field = (key: keyof CandidateEditForm, value: string | number) => onFormChange({ ...form, [key]: value });
   return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="sm:max-w-[540px]">
-    <DialogHeader><DialogTitle>Aday Bilgilerini Düzenle</DialogTitle><DialogDescription>Adayın profil bilgilerini güncelleyin.</DialogDescription></DialogHeader>
+    <DialogHeader><DialogTitle>Aday bilgilerini düzenle</DialogTitle><DialogDescription>Adayın profil bilgilerini güncelleyin.</DialogDescription></DialogHeader>
     <div className="grid max-h-[60vh] grid-cols-2 gap-4 overflow-y-auto py-4 pr-1">
       <Field label="Adı *" value={form.firstName} onChange={v=>field("firstName",v)} /><Field label="Soyadı *" value={form.lastName} onChange={v=>field("lastName",v)} />
-      <Field wide label="LinkedIn Profil Adresi" value={form.linkedinUrl} onChange={v=>field("linkedinUrl",v)} placeholder="https://linkedin.com/in/username" />
+      <Field wide label="LinkedIn profil adresi" value={form.linkedinUrl} onChange={v=>field("linkedinUrl",v)} placeholder="https://linkedin.com/in/username" />
       <Field wide label="E-posta" type="email" value={form.email} onChange={v=>field("email",v)} />
       <Field label="Telefon" value={form.phone} onChange={v=>field("phone",v)} /><Field label="Şehir" value={form.city} onChange={v=>field("city",v)} />
-      <Field label="Mevcut Şirket" value={form.currentCompany} onChange={v=>field("currentCompany",v)} /><Field label="Mevcut Unvan" value={form.currentJobTitle} onChange={v=>field("currentJobTitle",v)} />
-      <Field wide label="İhbar Süresi (Gün)" type="number" value={String(form.noticePeriodDays)} onChange={v=>field("noticePeriodDays",v)} />
+      <Field label="Mevcut şirket" value={form.currentCompany} onChange={v=>field("currentCompany",v)} /><Field label="Mevcut unvan" value={form.currentJobTitle} onChange={v=>field("currentJobTitle",v)} />
+      <Field wide label="İhbar süresi (gün)" type="number" value={String(form.noticePeriodDays)} onChange={v=>field("noticePeriodDays",v)} />
       <div className="col-span-2 space-y-2 rounded-lg border border-border bg-muted/30 p-3">
         <div className="flex items-center justify-between gap-3"><div><label className="text-sm font-medium">CV</label><p className="text-xs text-muted-foreground">En fazla {formatFileSize(cvContract.maxFileSizeBytes)}; {cvContract.allowedExtensions.join(", ")} yükleyin.</p></div>
           <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm hover:bg-accent"><Upload className="h-4 w-4" />{cv || cvFile ? "Değiştir" : "PDF seç"}
@@ -34,7 +34,7 @@ export function EditCandidateDialog({ open, form, cv, cvFile, cvLoading, cvContr
           : <p className="text-sm text-muted-foreground">Bu adaya henüz CV yüklenmemiş.</p>}
       </div>
     </div>
-    <DialogFooter><Button variant="outline" onClick={()=>onOpenChange(false)}>İptal</Button><Button onClick={onSave} disabled={submitting}>{submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Değişiklikleri Kaydet</Button></DialogFooter>
+    <DialogFooter><Button variant="outline" onClick={()=>onOpenChange(false)}>İptal</Button><Button onClick={onSave} disabled={submitting}>{submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Değişiklikleri kaydet</Button></DialogFooter>
   </DialogContent></Dialog>;
 }
 

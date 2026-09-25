@@ -127,7 +127,7 @@ export default function Pipelines() {
       setShowEditPipeline(false);
       toast.success("İşe alım süreci güncellendi.");
     } catch (err: any) {
-      toast.error("Pipeline güncellenemedi: " + (err.response?.data?.message || err.message || "Bilinmeyen hata"));
+      toast.error("İşe alım süreci güncellenemedi: " + (err.response?.data?.message || err.message || "Bilinmeyen hata"));
     } finally {
       setEditPipelineSaving(false);
     }
@@ -147,7 +147,7 @@ export default function Pipelines() {
       }
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || "Bilinmeyen hata";
-      toast.error("Pipeline'lar yüklenemedi: " + msg);
+      toast.error("İşe alım süreçleri yüklenemedi: " + msg);
     } finally {
       setLoading(false);
     }
@@ -175,7 +175,7 @@ export default function Pipelines() {
       const detail = await pipelineApi.getById(id);
       setSelectedPipeline(detail);
     } catch (err: any) {
-      toast.error("Pipeline detayı yüklenemedi: " + (err.message || ""));
+      toast.error("İşe alım süreci detayı yüklenemedi: " + (err.message || ""));
     } finally {
       setDetailLoading(false);
     }
@@ -322,7 +322,7 @@ export default function Pipelines() {
           "Telefon": row.candidate.phone || "",
           "Başvurulan Pozisyon": row.positionTitle,
           "Departman": row.departmentName,
-          "Pipeline": selectedPipeline?.name || row.process.pipelineName || "",
+          "İşe alım süreci": selectedPipeline?.name || row.process.pipelineName || "",
           "Mevcut Aşama": row.process.currentStageName || "",
           "Süreç Durumu": statusLabels[row.process.currentStageType] || row.process.currentStageType || "",
           "LinkedIn": row.candidate.linkedinUrl || "",
@@ -334,7 +334,7 @@ export default function Pipelines() {
             : "",
         })),
         "ise-alim-sureci-raporu",
-        "İşe Alım Süreci",
+        "İşe alım süreci",
       );
       toast.success(`${filteredProcesses.length} başvuru Excel'e aktarıldı.`);
     } catch {
@@ -355,7 +355,7 @@ export default function Pipelines() {
   const handleCreatePipeline = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPipelineName.trim()) {
-      toast.error("Pipeline adı zorunludur.");
+      toast.error("İşe alım süreci adı zorunludur.");
       return;
     }
     if (newPipelineStages.length === 0 || newPipelineStages.some((stage) => !stage.name.trim())) {
@@ -378,11 +378,11 @@ export default function Pipelines() {
         })),
       };
       await pipelineApi.create(payload);
-      toast.success(`"${newPipelineName.trim()}" pipeline'ı oluşturuldu!`);
+      toast.success(`"${newPipelineName.trim()}" işe alım süreci oluşturuldu!`);
       setShowCreateDialog(false);
       loadSummaries();
     } catch (err: any) {
-      const msg = err.response?.data?.message || "Pipeline oluşturulamadı.";
+      const msg = err.response?.data?.message || "İşe alım süreci oluşturulamadı.";
       toast.error(msg);
     } finally {
       setCreateLoading(false);
@@ -395,7 +395,7 @@ export default function Pipelines() {
     setDeactivateLoading(true);
     try {
       await pipelineApi.deactivate(deactivateTargetId);
-      toast.success("Pipeline silindi.");
+      toast.success("İşe alım süreci silindi.");
       setDeactivateTargetId(null);
       if (selectedPipelineId === deactivateTargetId) {
         setSelectedPipeline(null);
@@ -403,7 +403,7 @@ export default function Pipelines() {
       }
       loadSummaries();
     } catch (err: any) {
-      const msg = err.response?.data?.message || "Pipeline silinemedi.";
+      const msg = err.response?.data?.message || "İşe alım süreci silinemedi.";
       toast.error(msg);
     } finally {
       setDeactivateLoading(false);
@@ -454,7 +454,7 @@ export default function Pipelines() {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between animate-slide-up">
         <div>
-          <h1 className="page-title">İşe Alım Süreci</h1>
+          <h1 className="page-title">İşe alım süreci</h1>
           <p className="page-description">Adayların işe alım aşamalarını tek ekrandan yönetin.</p>
         </div>
         {canManagePipeline && <button
@@ -463,7 +463,7 @@ export default function Pipelines() {
           className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3.5 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
         >
           <Plus className="h-4 w-4" />
-          Yeni Pipeline
+          Yeni işe alım süreci
         </button>}
       </div>
 
@@ -521,7 +521,7 @@ export default function Pipelines() {
                   setDeactivateTargetId(pipeline.id);
                 }}
                 className="mr-1 rounded-md p-1.5 text-muted-foreground/30 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 focus:opacity-100"
-                title="Pipeline'ı sil"
+                title="İşe alım sürecini sil"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>}
@@ -536,16 +536,16 @@ export default function Pipelines() {
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary mx-auto mb-5">
             <GitBranch className="h-8 w-8" />
           </div>
-          <h3 className="font-display text-xl font-semibold text-foreground">Henüz pipeline yok</h3>
+          <h3 className="font-display text-xl font-semibold text-foreground">Henüz işe alım süreci yok</h3>
           <p className="text-muted-foreground mt-2 max-w-sm mx-auto text-sm">
-            "Yeni Pipeline" butonuna tıklayarak 9 aşamalı standart işe alım sürecinizi oluşturabilirsiniz.
+            "Yeni işe alım süreci" butonuna tıklayarak 9 aşamalı standart işe alım sürecinizi oluşturabilirsiniz.
           </p>
           {canManagePipeline && <button
             onClick={handleOpenCreate}
             className="mt-6 flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-white hover:bg-primary/90 transition-all mx-auto"
           >
             <Plus className="h-4 w-4" />
-            Pipeline Oluştur
+            İşe alım süreci oluştur
           </button>}
         </div>
       )}
@@ -568,7 +568,7 @@ export default function Pipelines() {
 
             {stagesWithCandidates.length === 0 ? (
               <p className="text-sm text-muted-foreground py-2">
-                Bu pipeline için tanımlı aşama bulunmuyor.
+                Bu işe alım süreci için tanımlı aşama bulunmuyor.
               </p>
             ) : (
               <div className="flex gap-2 overflow-x-auto pb-2">
@@ -884,7 +884,7 @@ export default function Pipelines() {
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <div className="flex items-center gap-2 pr-8">
-              <DialogTitle>{selectedPipeline?.name || "Pipeline detayı"}</DialogTitle>
+              <DialogTitle>{selectedPipeline?.name || "İşe alım süreci detayı"}</DialogTitle>
               {selectedPipeline?.defaultPipeline && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                   <Star className="h-3 w-3" /> Varsayılan
@@ -903,7 +903,7 @@ export default function Pipelines() {
           ) : selectedPipeline ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2">
-                <span className="text-xs text-muted-foreground">Pipeline kodu</span>
+                <span className="text-xs text-muted-foreground">İşe alım süreci kodu</span>
                 <span className="font-mono text-xs font-medium text-foreground">{selectedPipeline.code}</span>
               </div>
               <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-border sm:grid-cols-4">
@@ -956,7 +956,7 @@ export default function Pipelines() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <GitBranch className="h-5 w-5" />
                 </div>
-                <h2 className="font-display text-lg font-semibold text-foreground">Yeni Pipeline</h2>
+                <h2 className="font-display text-lg font-semibold text-foreground">Yeni işe alım süreci</h2>
               </div>
               <button
                 onClick={() => setShowCreateDialog(false)}
@@ -969,7 +969,7 @@ export default function Pipelines() {
             <form onSubmit={handleCreatePipeline} className="px-6 py-5 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1.5">
-                  Pipeline Adı <span className="text-destructive">*</span>
+                  İşe alım süreci adı <span className="text-destructive">*</span>
                 </label>
                 <input
                   id="pipeline-name-input"
@@ -979,7 +979,7 @@ export default function Pipelines() {
                     setNewPipelineName(e.target.value);
                     setNewPipelineCode(generateEntityCode(e.target.value));
                   }}
-                  placeholder="Pipeline adını girin"
+                  placeholder="İşe alım süreci adını girin"
                   required
                   className="w-full rounded-xl bg-input/50 border border-border px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
                 />
@@ -993,7 +993,7 @@ export default function Pipelines() {
                   id="pipeline-desc-input"
                   value={newPipelineDesc}
                   onChange={(e) => setNewPipelineDesc(e.target.value)}
-                  placeholder="Pipeline hakkında kısa açıklama..."
+                  placeholder="İşe alım süreci hakkında kısa açıklama..."
                   rows={2}
                   className="w-full rounded-xl bg-input/50 border border-border px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all resize-none"
                 />
@@ -1008,15 +1008,15 @@ export default function Pipelines() {
                   className="h-4 w-4 rounded accent-primary"
                 />
                 <label htmlFor="pipeline-default-input" className="text-sm text-foreground cursor-pointer">
-                  <span className="font-medium">Varsayılan pipeline olarak ayarla</span>
-                  <span className="block text-xs text-muted-foreground">Yeni pozisyonlar bu pipeline ile otomatik eşleşir.</span>
+                  <span className="font-medium">Varsayılan işe alım süreci olarak ayarla</span>
+                  <span className="block text-xs text-muted-foreground">Yeni pozisyonlar bu işe alım süreci ile otomatik eşleşir.</span>
                 </label>
               </div>
 
               <div className="rounded-xl border border-border bg-muted/20 p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">Pipeline aşamaları</p>
+                    <p className="text-sm font-semibold text-foreground">İşe alım süreci aşamaları</p>
                     <p className="text-xs text-muted-foreground">Yalnızca burada tanımladığınız aşamalar oluşturulur.</p>
                   </div>
                   <button
@@ -1108,9 +1108,9 @@ export default function Pipelines() {
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive mx-auto mb-4">
                 <AlertTriangle className="h-7 w-7" />
               </div>
-              <h3 className="font-display text-lg font-semibold text-foreground">Pipeline'ı Sil</h3>
+              <h3 className="font-display text-lg font-semibold text-foreground">İşe alım sürecini sil</h3>
               <p className="text-sm text-muted-foreground mt-2">
-                Bu pipeline'ı silmek istediğinize emin misiniz? Mevcut aday süreçleri etkilenmeyecektir.
+                Bu işe alım sürecini silmek istediğinize emin misiniz? Mevcut aday süreçleri etkilenmeyecektir.
               </p>
             </div>
             <div className="flex gap-3 px-6 pb-6">

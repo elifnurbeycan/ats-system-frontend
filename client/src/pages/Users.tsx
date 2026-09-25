@@ -221,7 +221,7 @@ export default function Users() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="page-title">Kullanıcı Yönetimi</h1>
+          <h1 className="page-title">Kullanıcı yönetimi</h1>
           <p className="text-muted-foreground mt-1">
             Şirket kullanıcılarını yönetin, rol atayın
           </p>
@@ -229,7 +229,7 @@ export default function Users() {
         <div className="flex gap-2">
           <Button onClick={() => setShowCreateDialog(true)} className="bg-[#1e3a5f] hover:bg-[#2a4a6f]">
             <Plus className="w-4 h-4 mr-2" />
-            Yeni Kullanıcı
+            Yeni kullanıcı
           </Button>
         </div>
       </div>
@@ -405,7 +405,7 @@ export default function Users() {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Yeni Kullanıcı Oluştur</DialogTitle>
+            <DialogTitle>Yeni kullanıcı oluştur</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -436,7 +436,7 @@ export default function Users() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Geçici Şifre * (En az 12 karakter)</label>
+              <label className="text-sm font-medium">Geçici şifre * (en az 12 karakter)</label>
               <Input
                 value={createForm.temporaryPassword}
                 onChange={(e) => setCreateForm({ ...createForm, temporaryPassword: e.target.value })}

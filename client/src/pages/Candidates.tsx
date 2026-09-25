@@ -508,7 +508,7 @@ export default function Candidates() {
       "Mevcut Pozisyon": candidate.currentJobTitle,
       "Başvurulan Pozisyon": candidate.position?.title,
       "Departman": candidate.position?.departmentName,
-      "Pipeline": candidate.pipelineName,
+      "İşe alım süreci": candidate.pipelineName,
       "Aşama": candidate.stage?.name,
       "Başvuru Tarihi": candidate.createdAt ? new Date(candidate.createdAt).toLocaleString("tr-TR") : "",
       "Süreç Durumu": candidate.stageType === "HIRED" ? "İşe Alındı" : candidate.stageType === "REJECTED" ? "Süreç sonlandı" : candidate.stageType === "ON_HOLD" ? "Beklemede" : "Aktif",
@@ -589,7 +589,7 @@ export default function Candidates() {
             onClick={() => setShowCreateDialog(true)}
             className="flex items-center gap-2 rounded-xl bg-primary text-primary-foreground px-4 py-2.5 text-sm font-medium hover:bg-primary/90 transition-all duration-200 active:scale-[0.97]"
           >
-            <Plus className="h-4 w-4" /> Yeni Aday
+            <Plus className="h-4 w-4" /> Yeni aday
           </button>}
         </div>
       </div>
@@ -599,7 +599,7 @@ export default function Candidates() {
         <section className="enterprise-panel p-4 animate-slide-up" style={{ animationDelay: "75ms" }}>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <h2 className="section-title">Aşamalara Göre Adaylar</h2>
+              <h2 className="section-title">Aşamalara göre adaylar</h2>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 Bir aşamaya tıklayarak o aşamadaki adayları listeleyin.
               </p>
@@ -774,14 +774,14 @@ export default function Candidates() {
                     sortDirection={sortField === "name" ? sortDir : null} onSort={(direction) => setColumnSort("name", direction)} placeholder="Aday adı..." />
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-4">
-                  <ColumnFilterMenu label="Başvurulan Pozisyon" value={columnFilters.position || ""} onChange={(value) => setColumnFilter("position", value)}
+                  <ColumnFilterMenu label="Başvurulan pozisyon" value={columnFilters.position || ""} onChange={(value) => setColumnFilter("position", value)}
                     options={columnOptions.positions} sortDirection={sortField === "position" ? sortDir : null} onSort={(direction) => setColumnSort("position", direction)} />
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-4">
                   <ColumnFilterMenu label="Departman" value={columnFilters.department || ""} onChange={(value) => setColumnFilter("department", value)} options={columnOptions.departments} />
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-4">
-                  <ColumnFilterMenu label="Mevcut Şirket" value={columnFilters.company || ""} onChange={(value) => setColumnFilter("company", value)}
+                  <ColumnFilterMenu label="Mevcut şirket" value={columnFilters.company || ""} onChange={(value) => setColumnFilter("company", value)}
                     options={columnOptions.companies} sortDirection={sortField === "company" ? sortDir : null} onSort={(direction) => setColumnSort("company", direction)} />
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-4">
@@ -803,11 +803,11 @@ export default function Candidates() {
                     options={columnOptions.stages} sortDirection={sortField === "stage" ? sortDir : null} onSort={(direction) => setColumnSort("stage", direction)} />
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-4 whitespace-nowrap">
-                  <ColumnFilterMenu label="Başvuru Tarihi" value={columnFilters.applicationDate || ""} onChange={(value) => setColumnFilter("applicationDate", value)}
+                  <ColumnFilterMenu label="Başvuru tarihi" value={columnFilters.applicationDate || ""} onChange={(value) => setColumnFilter("applicationDate", value)}
                     options={[{ value: "WITH", label: "Tarihi olanlar" }, { value: "WITHOUT", label: "Tarihi olmayanlar" }]} />
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-4 whitespace-nowrap">
-                  <ColumnFilterMenu label="Sonuç Zamanı" value={columnFilters.resultDate || ""} onChange={(value) => setColumnFilter("resultDate", value)}
+                  <ColumnFilterMenu label="Sonuç zamanı" value={columnFilters.resultDate || ""} onChange={(value) => setColumnFilter("resultDate", value)}
                     options={[{ value: "WITH", label: "Sonuçlananlar" }, { value: "WITHOUT", label: "Henüz sonuçlanmayanlar" }]} />
                 </th>
                 <th className="px-5 py-4 w-28 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">İşlemler</th>

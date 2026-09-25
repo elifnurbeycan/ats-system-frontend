@@ -56,7 +56,7 @@ export default function Dashboard() {
         const summaryData = await dashboardApi.getSummary();
         setData(summaryData);
       } catch (err: any) {
-        toast.error("Dashboard özeti yüklenemedi: " + (err.response?.data?.message || err.message || "Bilinmeyen hata"));
+        toast.error("Kontrol paneli özeti yüklenemedi: " + (err.response?.data?.message || err.message || "Bilinmeyen hata"));
       }
 
       try {
@@ -177,31 +177,31 @@ export default function Dashboard() {
 
   const statCards = [
     {
-      label: "Toplam Aday",
+      label: "Toplam aday",
       value: stats.totalCandidates,
       icon: UsersIcon,
       color: "text-primary",
       bg: "bg-primary/10",
-      trend: "Aktif Havuz",
+      trend: "Aktif havuz",
     },
     {
-      label: "Açık Pozisyon",
+      label: "Açık pozisyon",
       value: stats.activePositions,
       icon: Briefcase,
       color: "text-chart-2",
       bg: "bg-chart-2/10",
-      trend: "İlana Açık",
+      trend: "İlana açık",
     },
     {
-      label: "Aktif Süreç",
+      label: "Aktif süreç",
       value: stats.activeCount,
       icon: Clock,
       color: "text-chart-3",
       bg: "bg-chart-3/10",
-      trend: "Devam Eden",
+      trend: "Devam eden",
     },
     {
-      label: "İşe Alınan",
+      label: "İşe alınan",
       value: stats.hiredCount,
       icon: UserCheck,
       color: "text-chart-1",
@@ -265,10 +265,10 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col gap-3 animate-slide-up sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="page-title">Kontrol Paneli</h1>
+          <h1 className="page-title">Kontrol paneli</h1>
           <p className="text-muted-foreground mt-1">İşe alım metrikleri ve dönemsel performans analizi</p>
         </div>
-        <DateRangeFilter value={contactDateRange} onChange={setContactDateRange} label="Dashboard tarih aralığı" />
+        <DateRangeFilter value={contactDateRange} onChange={setContactDateRange} label="Kontrol paneli tarih aralığı" />
       </div>
 
       {/* Stat cards */}
@@ -284,7 +284,7 @@ export default function Dashboard() {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">{card.label}</p>
-                  <p className="font-mono text-3xl font-semibold mt-2 text-foreground">
+                  <p className="font-sans tabular-nums text-3xl font-semibold mt-2 text-foreground">
                     {card.value}
                   </p>
                 </div>
@@ -311,7 +311,7 @@ export default function Dashboard() {
       {canViewCommunications && <section className="enterprise-panel overflow-hidden animate-slide-up" style={{ animationDelay: "210ms" }}>
         <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="section-title">İletişim Havuzu</h2>
+          <h2 className="section-title">İletişim havuzu</h2>
             <p className="mt-1 text-xs text-muted-foreground">İlk temasların güncel durumu ve aday sürecine dönüşümü</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -330,13 +330,13 @@ export default function Dashboard() {
             const Icon = metric.icon;
             return <div key={metric.label} className="flex items-center gap-3 border-b border-border p-4 last:border-b-0 sm:border-r xl:border-b-0 xl:last:border-r-0">
               <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", metric.tone)}><Icon className="h-5 w-5" /></div>
-              <div><p className="text-xs text-muted-foreground">{metric.label}</p><p className="mt-0.5 font-mono text-2xl font-bold text-foreground">{metric.value}</p></div>
+              <div><p className="text-xs text-muted-foreground">{metric.label}</p><p className="mt-0.5 font-sans tabular-nums text-2xl font-bold text-foreground">{metric.value}</p></div>
             </div>;
           })}
         </div>
         <div className="flex flex-col gap-2 border-t border-border bg-muted/15 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-muted-foreground">Olumlu dönüş oranı, sonuçlanan iletişimlerden aday sürecine aktarılanların oranıdır.</p>
-          <div className="flex items-center gap-3"><div className="h-1.5 w-32 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${positiveContactRate}%` }} /></div><span className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">%{positiveContactRate}</span></div>
+          <div className="flex items-center gap-3"><div className="h-1.5 w-32 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${positiveContactRate}%` }} /></div><span className="font-sans tabular-nums text-sm font-bold text-emerald-700 dark:text-emerald-400">%{positiveContactRate}</span></div>
         </div>
         <div className="grid gap-5 border-t border-border p-5 xl:grid-cols-5">
           <div className="xl:col-span-2">
@@ -366,7 +366,7 @@ export default function Dashboard() {
               <thead className="bg-muted/35 text-xs uppercase text-muted-foreground"><tr><th className="px-4 py-3">Sonlanma nedeni</th><th className="w-24 px-4 py-3 text-right">Kayıt</th><th className="w-[38%] px-4 py-3">Dağılım</th></tr></thead>
               <tbody className="divide-y divide-border">{rejectionReasonRows.map(([reason, count]) => {
                 const percentage = contactStats.rejected > 0 ? Math.round((count / contactStats.rejected) * 100) : 0;
-                return <tr key={reason} className="hover:bg-muted/20"><td className="px-4 py-3 font-medium text-foreground">{rejectionReasonLabels[reason]}</td><td className="px-4 py-3 text-right font-mono font-semibold text-foreground">{count}</td><td className="px-4 py-3"><div className="flex items-center gap-3"><div className="h-2 flex-1 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-rose-500" style={{ width: `${percentage}%` }} /></div><span className="w-10 text-right font-mono text-xs font-semibold text-muted-foreground">%{percentage}</span></div></td></tr>;
+                return <tr key={reason} className="hover:bg-muted/20"><td className="px-4 py-3 font-medium text-foreground">{rejectionReasonLabels[reason]}</td><td className="px-4 py-3 text-right font-sans tabular-nums font-semibold text-foreground">{count}</td><td className="px-4 py-3"><div className="flex items-center gap-3"><div className="h-2 flex-1 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-rose-500" style={{ width: `${percentage}%` }} /></div><span className="w-10 text-right font-sans tabular-nums text-xs font-semibold text-muted-foreground">%{percentage}</span></div></td></tr>;
               })}</tbody>
             </table>
           </div>}
@@ -405,7 +405,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">{metric.label}</p>
-                  <p className="mt-0.5 font-mono text-xl font-bold text-foreground">{metric.value}</p>
+                  <p className="mt-0.5 font-sans tabular-nums text-xl font-bold text-foreground">{metric.value}</p>
                 </div>
               </div>
             );
@@ -420,7 +420,7 @@ export default function Dashboard() {
             <div className="h-1.5 w-28 overflow-hidden rounded-full bg-muted">
               <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(periodHireRate, 100)}%` }} />
             </div>
-            <span className="font-mono text-sm font-bold text-emerald-700">%{periodHireRate}</span>
+            <span className="font-sans tabular-nums text-sm font-bold text-emerald-700">%{periodHireRate}</span>
           </div>
         </div>
       </section>
@@ -430,7 +430,7 @@ export default function Dashboard() {
         <div className="enterprise-panel p-5 xl:col-span-3">
           <div className="mb-5 flex items-start justify-between gap-3">
             <div>
-              <h2 className="section-title">Aylık Başvuru Trendi</h2>
+              <h2 className="section-title">Aylık başvuru trendi</h2>
               <p className="mt-1 text-xs text-muted-foreground">Son 12 ayda sisteme eklenen gerçek başvurular</p>
             </div>
             <span className="rounded-md bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
@@ -472,7 +472,7 @@ export default function Dashboard() {
 
         <div className="enterprise-panel p-5 xl:col-span-2">
           <div className="mb-5">
-            <h2 className="section-title">Departmanlara Göre Başvurular</h2>
+              <h2 className="section-title">Departmanlara göre başvurular</h2>
             <p className="mt-1 text-xs text-muted-foreground">Aktif başvuruların departman bazında dağılımı</p>
           </div>
 
@@ -512,7 +512,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="font-display text-xl font-semibold text-foreground">
-                Aşama Dağılımı
+                Aşama dağılımı
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
                 Adayların aşama bazında dağılımı
@@ -565,12 +565,12 @@ export default function Dashboard() {
         {/* Status summary */}
         <div className="glass rounded-2xl p-6 animate-slide-up" style={{ animationDelay: "400ms" }}>
           <h2 className="font-display text-xl font-semibold text-foreground mb-6">
-            Süreç Özeti
+            Süreç özeti
           </h2>
           <div className="space-y-4">
             <StatusRow
               icon={CheckCircle2}
-              label="İşe Alındı"
+              label="İşe alındı"
               count={stats.hiredCount}
               total={stats.totalProcesses}
               color="text-primary"
@@ -578,7 +578,7 @@ export default function Dashboard() {
             />
             <StatusRow
               icon={Clock}
-              label="Aktif Süreç"
+              label="Aktif süreç"
               count={stats.activeCount}
               total={stats.totalProcesses}
               color="text-chart-2"
@@ -605,8 +605,8 @@ export default function Dashboard() {
           {/* Hire rate circle */}
           <div className="mt-6 pt-6 border-t border-border">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">İşe Alım Oranı</span>
-              <span className="font-mono text-2xl font-bold text-primary">
+              <span className="text-sm text-muted-foreground">İşe alım oranı</span>
+              <span className="font-sans tabular-nums text-2xl font-bold text-primary">
                 {stats.hireRate}%
               </span>
             </div>
@@ -619,7 +619,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="font-display text-xl font-semibold text-foreground">
-              Son Aday Girişleri
+              Son aday girişleri
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
               Sisteme en son eklenen adaylar

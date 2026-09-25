@@ -262,7 +262,7 @@ export default function Positions() {
       "Durum": statusLabels[position.status] || position.status,
       "Kontenjan": position.vacancyCount,
       "Başvuran Aday": position.candidateCount,
-      "İşe Alınan": position.hiredCount,
+      "İşe alınan": position.hiredCount,
       "Açılış Tarihi": position.openedAt ? new Date(position.openedAt).toLocaleString("tr-TR") : "",
       "Kapanış Tarihi": position.closedAt ? new Date(position.closedAt).toLocaleString("tr-TR") : "",
       "Açıklama": position.description,
@@ -382,7 +382,7 @@ export default function Positions() {
             onClick={() => setShowCreateDialog(true)}
             className="flex items-center gap-2 rounded-xl bg-primary text-primary-foreground px-4 py-2.5 text-sm font-medium hover:bg-primary/90 transition-all duration-200 active:scale-[0.97]"
           >
-            <Plus className="h-4 w-4" /> Yeni Pozisyon
+            <Plus className="h-4 w-4" /> Yeni pozisyon
           </button>}
         </div>
       </div>
@@ -571,7 +571,7 @@ export default function Positions() {
       <Dialog open={showCreateDialog && canCreatePosition} onOpenChange={setShowCreateDialog}>
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
-            <DialogTitle>Yeni Pozisyon Oluştur</DialogTitle>
+            <DialogTitle>Yeni pozisyon oluştur</DialogTitle>
             <DialogDescription>
               Taslak aşamasında yeni bir işe alım pozisyonu tanımlayın.
             </DialogDescription>
@@ -579,7 +579,7 @@ export default function Positions() {
 
           <div className="space-y-4 py-4">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Pozisyon Unvanı *</label>
+              <label className="text-sm font-medium">Pozisyon unvanı *</label>
               <Input
                 value={createForm.title}
                 onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
@@ -588,7 +588,7 @@ export default function Positions() {
             </div>
 
              <div className="space-y-1.5">
-               <label className="text-sm font-medium">Açık Kontenjan *</label>
+               <label className="text-sm font-medium">Açık kontenjan *</label>
                <Input
                  type="number"
                  min="1"
@@ -622,7 +622,7 @@ export default function Positions() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Pozisyon Açıklaması</label>
+              <label className="text-sm font-medium">Pozisyon açıklaması</label>
               <textarea
                 value={createForm.description}
                 onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
@@ -658,7 +658,7 @@ export default function Positions() {
       <Dialog open={showEditDialog && canUpdatePosition} onOpenChange={setShowEditDialog}>
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
-            <DialogTitle>Pozisyonu Düzenle</DialogTitle>
+            <DialogTitle>Pozisyonu düzenle</DialogTitle>
             <DialogDescription>
               Pozisyon tanımlarını ve detaylarını güncelleyin.
             </DialogDescription>
@@ -666,7 +666,7 @@ export default function Positions() {
 
           <div className="space-y-4 py-4">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Pozisyon Unvanı *</label>
+              <label className="text-sm font-medium">Pozisyon unvanı *</label>
               <Input
                 value={editForm.title}
                 onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
@@ -705,7 +705,7 @@ export default function Positions() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Açık Kontenjan Sayısı *</label>
+              <label className="text-sm font-medium">Açık kontenjan sayısı *</label>
               <Input
                 type="number"
                 min="1"
@@ -716,7 +716,7 @@ export default function Positions() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Pozisyon Açıklaması</label>
+              <label className="text-sm font-medium">Pozisyon açıklaması</label>
               <textarea
                 value={editForm.description}
                 onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
@@ -741,7 +741,7 @@ export default function Positions() {
                   Kaydediliyor
                 </>
               ) : (
-                "Değişiklikleri Kaydet"
+                "Değişiklikleri kaydet"
               )}
             </Button>
           </DialogFooter>
@@ -752,7 +752,7 @@ export default function Positions() {
       <Dialog open={showStatusDialog && canChangePositionStatus} onOpenChange={setShowStatusDialog}>
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
-            <DialogTitle>Pozisyon Durumunu Değiştir</DialogTitle>
+            <DialogTitle>Pozisyon durumunu değiştir</DialogTitle>
             <DialogDescription>
               <strong>{targetPositionName}</strong> unvanlı pozisyonun durumunu <strong>{targetStatus === "OPEN" ? "Açık (Aktif)" : "Kapalı (Arşiv)"}</strong> olarak güncellemek istediğinize emin misiniz?
             </DialogDescription>

@@ -358,9 +358,9 @@ export default function Departments() {
 
       {/* ===== DEPARTMENTS VIEW ===== */}
       {viewMode === "departments" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           {departmentsWithStats.length === 0 ? (
-            <div className="col-span-full glass rounded-2xl p-12 text-center">
+            <div className="p-12 text-center">
               <Building2 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
               <p className="text-muted-foreground font-medium">Henüz departman tanımlanmamış.</p>
               <p className="text-sm text-muted-foreground/60 mt-1">
@@ -371,7 +371,7 @@ export default function Departments() {
             departmentsWithStats.map((dept, i) => (
               <div
                 key={dept.id}
-                className="glass glass-hover rounded-2xl p-6 text-left animate-slide-up group relative"
+                className="group flex animate-slide-up items-center gap-2 p-4 transition-colors hover:bg-primary/5 sm:p-5"
                 style={{ animationDelay: `${i * 60}ms` }}
               >
                 {/* Delete button */}
@@ -381,35 +381,33 @@ export default function Departments() {
                     e.stopPropagation();
                     setDeleteTargetId(dept.id);
                   }}
-                  className="absolute top-4 right-4 p-1.5 rounded-lg text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-all duration-200 opacity-0 group-hover:opacity-100"
+                  className="order-2 shrink-0 rounded-lg p-2 text-muted-foreground/50 transition-colors hover:bg-destructive/10 hover:text-destructive"
                   title="Departmanı sil"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>}
 
                 <button
-                  className="block w-full text-left"
+                  className="order-1 flex min-w-0 flex-1 items-center gap-4 text-left"
                   onClick={() => handleSelectDept(dept.id)}
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary mb-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <Building2 className="h-6 w-6" />
                   </div>
-                  <h3 className="font-display text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
-                    {dept.name}
-                  </h3>
-                  <p className="text-xs text-muted-foreground font-mono mt-1">{dept.code}</p>
-                  {dept.description && (
-                    <p className="text-sm text-muted-foreground mt-3 line-clamp-2">
-                      {dept.description}
-                    </p>
-                  )}
-                  <div className="grid grid-cols-3 gap-3 mt-6 pt-6 border-t border-border">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-display text-lg font-semibold text-foreground transition-colors group-hover:text-primary">
+                      {dept.name}
+                    </h3>
+                    <p className="mt-1 font-mono text-xs text-muted-foreground">{dept.code}</p>
+                    {dept.description && <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">{dept.description}</p>}
+                  </div>
+                  <div className="hidden shrink-0 grid-cols-3 gap-6 sm:grid">
                     <div>
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
                         <Briefcase className="h-3 w-3" />
                         Pozisyon
                       </div>
-                      <p className="font-mono text-lg font-semibold text-foreground">
+                      <p className="font-sans tabular-nums text-lg font-semibold text-foreground">
                         {dept.positionCount}
                       </p>
                     </div>
@@ -418,7 +416,7 @@ export default function Departments() {
                         <Briefcase className="h-3 w-3" />
                         Açık
                       </div>
-                      <p className="font-mono text-lg font-semibold text-primary">
+                      <p className="font-sans tabular-nums text-lg font-semibold text-primary">
                         {dept.openPositionCount}
                       </p>
                     </div>
@@ -427,12 +425,12 @@ export default function Departments() {
                         <Users className="h-3 w-3" />
                         Aday
                       </div>
-                      <p className="font-mono text-lg font-semibold text-foreground">
+                      <p className="font-sans tabular-nums text-lg font-semibold text-foreground">
                         {dept.candidateCount}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center justify-end mt-4">
+                  <div className="flex shrink-0 items-center justify-end">
                     <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:text-primary transition-all" />
                   </div>
                 </button>

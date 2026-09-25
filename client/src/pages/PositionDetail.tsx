@@ -135,7 +135,7 @@ export default function PositionDetail() {
           />
           <MetaItem
             icon={Users}
-            label="Toplam Aday"
+            label="Toplam aday"
             value={String(totalCandidates)}
           />
           <MetaItem
