@@ -1,208 +1,157 @@
-# ATS System Frontend
+# ATS Frontend
 
-ATS System; adayların, ilk iletişim kayıtlarının, pozisyonların, departmanların ve işe alım süreçlerinin tek bir arayüzden yönetilebilmesini sağlayan web tabanlı aday takip sistemidir.
+ATS Frontend; adayların, ilk temas kayıtlarının, açık pozisyonların ve işe alım süreçlerinin tek bir arayüzden yönetilmesini sağlayan React tabanlı web uygulamasıdır. Kimlik doğrulama Keycloak üzerinden yapılır; kullanıcının görebileceği menüler ve veriler backend tarafından döndürülen rol, izin, şirket ve departman kapsamına göre belirlenir.
 
-Backend repository:  
-https://github.com/elifnurbeycan/ats-system
+> Backend deposu: [elifnurbeycan/ats-system](https://github.com/elifnurbeycan/ats-system)
 
-## Özellikler
+## Ekran görüntüsü
 
-- Rol ve yetki bazlı kullanıcı arayüzü
-- Aday ve başvuru yönetimi
-- İlk iletişim havuzu
-- İletişim sonucu ve ret nedeni takibi
-- Departman ve pozisyon yönetimi
-- Özelleştirilebilir işe alım pipeline'ları
-- Aday aşama geçmişi ve not yönetimi
-- CV yükleme ve indirme
-- Maaş ve teklif bilgilerinin yönetimi
-- Departman, aşama ve duruma göre filtreleme
-- Sayfalama ve sıralama
-- Excel raporu oluşturma
-- Haftalık, aylık ve tüm zamanlara ait dashboard raporları
-- Açık ve koyu tema desteği
-- Responsive kullanıcı arayüzü
+![ATS giriş ekranı](docs/screenshots/giris.png)
 
-## Kullanılan Teknolojiler
+## Öne çıkan özellikler
 
-- React 19
-- TypeScript 5.6
-- Vite 7
-- Tailwind CSS 4
-- Radix UI
-- React Hook Form
-- Zod
-- Axios
-- Recharts
-- Wouter
-- SheetJS
-- Lucide React
-- pnpm
+- Aday, pozisyon, departman ve işe alım süreci yönetimi
+- Departman bazlı iletişim havuzu ve aday dönüşüm takibi
+- Tarih aralığı, sütun, durum ve departman filtreleri
+- Kontrol panelinde dönemsel metrikler ve Recharts grafikleri
+- Aday profilinde notlar, görüşmeler, süreç geçmişi ve aşama bazlı değerlendirmeler
+- Rol ve izinlere göre menü ve işlem görünürlüğü
+- Şirket ve departman kapsamına göre veri izolasyonu
+- Platform yöneticisi için şirket yönetim ekranları
+- Excel dışa aktarımı ve formül enjeksiyonuna karşı hücre temizleme
+- Açık/koyu tema, duyarlı yerleşim ve Türkçe arayüz
+- Keycloak SSO, PKCE ve bellekte tutulan erişim belirteçleri
+
+## Teknoloji yığını
+
+| Alan              | Teknoloji                    |
+| ----------------- | ---------------------------- |
+| Arayüz            | React 19, TypeScript, Vite 7 |
+| Stil              | Tailwind CSS 4, Radix UI     |
+| Yönlendirme       | Wouter                       |
+| Form ve doğrulama | React Hook Form, Zod         |
+| Grafik            | Recharts                     |
+| Tarih             | date-fns, React Day Picker   |
+| HTTP              | Axios                        |
+| Kimlik doğrulama  | Keycloak JS                  |
+| Birim testi       | Vitest                       |
+| Uçtan uca test    | Playwright                   |
+
+## Mimari
+
+```mermaid
+flowchart LR
+    U[Kullanıcı] --> UI[React arayüzü]
+    UI -->|OIDC + PKCE| KC[Keycloak]
+    UI -->|Bearer JWT| API[ATS Backend API]
+    API -->|rol, izin ve veri kapsamı| UI
+```
+
+Başlıca kaynak dizinleri:
+
+```text
+client/src/
+├── components/   # Ortak arayüz bileşenleri ve ana yerleşim
+├── contexts/     # Tema gibi uygulama bağlamları
+├── hooks/        # Yeniden kullanılabilir React hook'ları
+├── lib/          # API istemcileri, Keycloak, izin ve yardımcı araçlar
+└── pages/        # Sayfa bileşenleri
+e2e/              # Playwright senaryoları
+server/           # Production statik sunucu girişi
+shared/           # Paylaşılan tip ve sabitler
+```
 
 ## Gereksinimler
 
-Projeyi çalıştırmadan önce aşağıdaki araçların kurulu olması gerekir:
-
-- Node.js 20.19 veya üzeri
+- Node.js 20 veya üzeri
 - pnpm 10
-- Git
-- Çalışır durumda ATS System backend uygulaması
-
-Node.js ve pnpm sürümlerini kontrol etmek için:
-
-```powershell
-node --version
-pnpm --version
-```
-
-pnpm kurulu değilse:
-
-```powershell
-npm install -g pnpm
-```
+- Çalışan ATS Backend (`http://localhost:8080`)
+- Çalışan Keycloak (`http://localhost:8081`)
 
 ## Kurulum
-
-Repository'yi klonlayın:
 
 ```powershell
 git clone https://github.com/elifnurbeycan/ats-system-frontend.git
 cd ats-system-frontend
-```
-
-Bağımlılıkları yükleyin:
-
-```powershell
+Copy-Item .env.example .env
 pnpm install
-```
-
-## Ortam Değişkenleri
-
-Projenin kök dizininde `.env` dosyası oluşturun:
-
-```env
-VITE_API_URL=http://localhost:8080
-VITE_COMPANY_ID=1
-```
-
-Değişkenlerin açıklamaları:
-
-| Değişken | Açıklama | Varsayılan |
-|---|---|---|
-| `VITE_API_URL` | Backend uygulamasının adresi | `http://localhost:8080` |
-| `VITE_COMPANY_ID` | Yerel geliştirmede kullanılacak şirket kimliği | `1` |
-
-`.env` dosyasına parola, token veya üretim ortamına ait gizli bilgi eklemeyin.
-
-## Uygulamayı Çalıştırma
-
-Geliştirme sunucusunu başlatın:
-
-```powershell
 pnpm dev
 ```
 
-Uygulama varsayılan olarak aşağıdaki adreste açılır:
+Uygulama varsayılan olarak [http://localhost:3000](http://localhost:3000) adresinde açılır.
 
-```text
-http://localhost:3000
+Keycloak ile gerçek oturum açma için `.env` dosyasında aşağıdaki değeri etkinleştirin:
+
+```dotenv
+VITE_KEYCLOAK_ENABLED=true
 ```
 
-Port `3000` kullanımdaysa Vite otomatik olarak başka bir port seçebilir. Terminalde gösterilen `Local` adresini kullanın.
+## Ortam değişkenleri
 
-Backend uygulamasının da aşağıdaki adreste çalışıyor olması gerekir:
+| Değişken                  | Açıklama                     | Varsayılan örnek        |
+| ------------------------- | ---------------------------- | ----------------------- |
+| `VITE_API_URL`            | Backend API adresi           | `http://localhost:8080` |
+| `VITE_KEYCLOAK_ENABLED`   | Keycloak entegrasyonunu açar | `false`                 |
+| `VITE_KEYCLOAK_URL`       | Keycloak sunucu adresi       | `http://localhost:8081` |
+| `VITE_KEYCLOAK_REALM`     | Uygulama realm'i             | `ats`                   |
+| `VITE_KEYCLOAK_CLIENT_ID` | Public frontend istemcisi    | `ats-frontend`          |
 
-```text
-http://localhost:8080
-```
+Gerçek `.env` dosyası Git'e gönderilmez. İstemci tarafındaki `VITE_*` değerlerinin tarayıcı paketine dahil edildiğini unutmayın; bu değişkenlere parola veya client secret yazmayın.
 
-## Kontrol ve Build
+## Komutlar
 
-TypeScript kontrolü:
+| Komut           | Açıklama                              |
+| --------------- | ------------------------------------- |
+| `pnpm dev`      | Geliştirme sunucusunu başlatır        |
+| `pnpm build`    | Production paketini oluşturur         |
+| `pnpm preview`  | Oluşturulan paketi yerelde önizler    |
+| `pnpm check`    | TypeScript tip kontrolünü çalıştırır  |
+| `pnpm test`     | Vitest birim testlerini çalıştırır    |
+| `pnpm test:e2e` | Playwright testlerini çalıştırır      |
+| `pnpm format`   | Prettier ile kaynakları biçimlendirir |
+
+## Sayfalar
+
+| Yol                | İçerik                            |
+| ------------------ | --------------------------------- |
+| `/`                | Kontrol paneli                    |
+| `/adaylar`         | Aday listesi ve filtreler         |
+| `/adaylar/:id`     | Aday profili ve süreç ayrıntıları |
+| `/iletisim`        | Departman bazlı ilk temas havuzu  |
+| `/pozisyonlar`     | Pozisyon yönetimi                 |
+| `/departmanlar`    | Departman yönetimi                |
+| `/ise-alim-sureci` | İşe alım panosu ve aşamalar       |
+| `/kullanicilar`    | Şirket kullanıcıları              |
+| `/roller`          | Rol ve izin yönetimi              |
+| `/ayarlar`         | Kullanıcı ve şirket ayarları      |
+| `/admin`           | Platform yöneticisi şirket ekranı |
+
+## Yetkilendirme yaklaşımı
+
+Frontend, kullanıcı deneyimi için menüleri ve butonları rol/izin bilgisine göre gösterir. Bu kontroller güvenlik sınırı değildir. Asıl yetkilendirme, şirket ve departman veri kapsamı dahil olmak üzere backend üzerinde uygulanır.
+
+Desteklenen temel roller arasında `SUPER_ADMIN`, `COMPANY_ADMIN`, `HR`, `RECRUITER`, `GENERAL_MANAGER`, `DEPARTMENT_MANAGER`, `HIRING_MANAGER` ve `INTERVIEWER` bulunur. Ekran erişimi ayrıca backend'den gelen ayrıntılı izin kodlarıyla daraltılır.
+
+## Testler
 
 ```powershell
 pnpm check
-```
-
-Production build oluşturma:
-
-```powershell
+pnpm test
+pnpm test:e2e
 pnpm build
 ```
 
-Build sonucunu yerel olarak önizleme:
+Mevcut test kapsamı; Excel hücre güvenliği, korunan sayfaların Keycloak'a yönlendirilmesi ve eski oturum toplama endpoint'inin kapalı olması gibi kritik akışları içerir.
 
-```powershell
-pnpm preview
-```
+## Güvenlik notları
 
-Kod biçimlendirme:
+- Kimlik doğrulama Authorization Code + PKCE akışıyla Keycloak üzerinden yapılır.
+- Erişim ve yenileme belirteçleri `localStorage` veya `sessionStorage` içine kopyalanmaz.
+- API istekleri `Authorization: Bearer <token>` başlığıyla gönderilir.
+- Excel dışa aktarımında formül olarak yorumlanabilecek değerler güvenli hale getirilir.
+- Depo yalnızca `.env.example` içerir; gerçek ortam dosyaları commit edilmemelidir.
+- Tenant ve departman izolasyonu yalnızca arayüzde değil, backend sorgu ve güvenlik katmanında uygulanmalıdır.
 
-```powershell
-pnpm format
-```
+## Lisans
 
-## Proje Yapısı
-
-```text
-client/
-├── public/
-└── src/
-    ├── components/      Tekrar kullanılabilir UI bileşenleri
-    ├── contexts/        React context yapıları
-    ├── hooks/           Özel React hook'ları
-    ├── lib/
-    │   └── api/         Backend API istemcileri
-    ├── pages/           Uygulama sayfaları
-    ├── App.tsx          Route ve uygulama yapısı
-    ├── main.tsx         React başlangıç dosyası
-    └── index.css        Global stiller ve tema değişkenleri
-
-server/
-└── index.ts             Production sunucu başlangıcı
-
-shared/                  Paylaşılan tipler ve yardımcı yapılar
-```
-
-## Backend Bağlantısı
-
-Frontend tek başına yeterli değildir. Giriş, aday, iletişim, pipeline, raporlama ve dosya işlemleri backend API üzerinden gerçekleştirilir.
-
-Backend kurulum talimatları:
-
-https://github.com/elifnurbeycan/ats-system
-
-Yerel geliştirme portları:
-
-| Servis | Port |
-|---|---:|
-| Frontend | `3000` |
-| Backend | `8080` |
-| PostgreSQL | `5432` |
-| Mailpit SMTP | `1025` |
-| Mailpit arayüzü | `8025` |
-
-## Güvenlik
-
-- Yetki kontrollerinin asıl kaynağı backend uygulamasıdır.
-- Frontend tarafında butonların gizlenmesi tek başına güvenlik kontrolü değildir.
-- Access token ve kullanıcı oturumu yalnızca uygulamanın mevcut kimlik doğrulama sistemi üzerinden yönetilmelidir.
-- `.env` dosyaları ve gerçek kullanıcı bilgileri GitHub'a yüklenmemelidir.
-
-## Commit Standardı
-
-Projede Conventional Commits formatı kullanılmaktadır:
-
-```text
-feat: yeni özellik
-fix: hata düzeltmesi
-refactor: davranışı değiştirmeyen kod düzenlemesi
-docs: dokümantasyon değişikliği
-style: görsel veya biçimsel düzenleme
-test: test ekleme veya güncelleme
-chore: bakım işlemi
-```
-
-## Proje Durumu
-
-Proje aktif olarak geliştirilmektedir.
+Bu proje `package.json` içinde MIT lisanslı olarak tanımlanmıştır.

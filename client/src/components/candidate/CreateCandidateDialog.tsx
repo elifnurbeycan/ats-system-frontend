@@ -45,7 +45,7 @@ export function CreateCandidateDialog({ open, form, departments, positions, pipe
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>Yeni Aday Ekle</DialogTitle>
+          <DialogTitle>Yeni aday ekle</DialogTitle>
           <DialogDescription>Kişiyi iletişim havuzuna ekleyin. Olumlu dönüş alındığında işe alım süreci başlayacaktır.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -53,11 +53,11 @@ export function CreateCandidateDialog({ open, form, departments, positions, pipe
             <Field label="Adı *" value={form.firstName} placeholder="Ahmet" onChange={(value) => update({ firstName: value })} />
             <Field label="Soyadı *" value={form.lastName} placeholder="Yılmaz" onChange={(value) => update({ lastName: value })} />
           </div>
-          <Field label="LinkedIn Profil Adresi" value={form.linkedinUrl} placeholder="https://linkedin.com/in/username" onChange={updateLinkedIn} />
+          <Field label="LinkedIn profil adresi" value={form.linkedinUrl} placeholder="https://linkedin.com/in/username" onChange={updateLinkedIn} />
           <p className="-mt-2 text-xs text-muted-foreground">Profil adresindeki kullanıcı adından ad-soyad önerilir. Kaydetmeden önce doğrulayın.</p>
           <SelectField label="Departman *" value={form.departmentId} placeholder="Departman seçin" emptyText="Aktif departman bulunmuyor" items={departments.map((item) => ({ value: String(item.id), label: item.name }))} onChange={(value) => update({ departmentId: value, positionId: "" })} />
-          <SelectField label="Başvurulan Pozisyon *" value={form.positionId} placeholder={form.departmentId ? "Pozisyon seçin" : "Önce departman seçin"} emptyText="Bu departmanda açık pozisyon bulunmuyor" disabled={!form.departmentId} items={positions.map((item) => ({ value: String(item.id), label: item.title }))} onChange={(value) => update({ positionId: value })} />
-          <SelectField label="Süreç Pipeline *" value={form.pipelineId} placeholder="Pipeline seçin" emptyText="Pipeline bulunmuyor" items={pipelines.map((item) => ({ value: String(item.id), label: item.name }))} onChange={(value) => update({ pipelineId: value })} />
+          <SelectField label="Başvurulan pozisyon *" value={form.positionId} placeholder={form.departmentId ? "Pozisyon seçin" : "Önce departman seçin"} emptyText="Bu departmanda açık pozisyon bulunmuyor" disabled={!form.departmentId} items={positions.map((item) => ({ value: String(item.id), label: item.title }))} onChange={(value) => update({ positionId: value })} />
+          <SelectField label="İşe alım süreci *" value={form.pipelineId} placeholder="İşe alım süreci seçin" emptyText="İşe alım süreci bulunmuyor" items={pipelines.map((item) => ({ value: String(item.id), label: item.name }))} onChange={(value) => update({ pipelineId: value })} />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>İptal</Button>

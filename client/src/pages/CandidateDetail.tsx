@@ -310,7 +310,7 @@ export default function CandidateDetail() {
     if (!selectedProcess) return;
     const targetStage = activeStages.find((stage) => stage.stageType === stageType);
     if (!targetStage) {
-      toast.error(stageType === "ON_HOLD" ? "Bu pipeline için bekleme aşaması bulunamadı." : "Bu pipeline için red aşaması bulunamadı.");
+      toast.error(stageType === "ON_HOLD" ? "Bu işe alım süreci için bekleme aşaması bulunamadı." : "Bu işe alım süreci için süreç sonlandı aşaması bulunamadı.");
       return;
     }
     if (targetStage.id === selectedProcess.currentStageId) return;
@@ -548,7 +548,7 @@ export default function CandidateDetail() {
               <div className="glass rounded-xl p-6">
                 <div className="mb-6 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-end sm:justify-between">
                   <div>
-                    <h3 className="font-display font-semibold text-foreground">İşe Alım Süreci</h3>
+                    <h3 className="font-display font-semibold text-foreground">İşe alım süreci</h3>
                     <p className="mt-1 text-xs text-muted-foreground">İlerletme ve reddetme işlemleri seçili başvuruya uygulanır.</p>
                   </div>
                   {processes.length > 0 && (
@@ -741,7 +741,7 @@ export default function CandidateDetail() {
                     <thead>
                       <tr className="border-b border-border bg-muted/20">
                         <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Pozisyon</th>
-                        <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Pipeline</th>
+                        <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">İşe alım süreci</th>
                         <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Mevcut Aşama</th>
                         <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Durum</th>
                       </tr>

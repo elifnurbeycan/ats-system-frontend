@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bell, Building2, Database, LockKeyhole, Shield, User, Webhook } from "lucide-react";
+import { Building2, LockKeyhole, Shield, User, Webhook } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { departmentApi, type AuthenticatedUser } from "@/lib/api";
 
-type TabId = "profile" | "notifications" | "security" | "organization" | "api" | "data";
+type TabId = "profile" | "security" | "organization" | "api";
 
 const ROLE_LABELS: Record<string, string> = {
   COMPANY_ADMIN: "Şirket yöneticisi",
@@ -49,13 +49,11 @@ export default function Settings() {
 
   const tabs = [
     { id: "profile" as const, label: "Profilim", icon: User },
-    { id: "notifications" as const, label: "Bildirimler", icon: Bell },
     { id: "security" as const, label: "Güvenlik", icon: Shield },
     ...(isCompanyAdmin
       ? [
           { id: "organization" as const, label: "Şirket", icon: Building2 },
-          { id: "api" as const, label: "API & Webhook", icon: Webhook },
-          { id: "data" as const, label: "Veri Yönetimi", icon: Database },
+          { id: "api" as const, label: "API ve webhook", icon: Webhook },
         ]
       : []),
   ];
@@ -113,14 +111,6 @@ export default function Settings() {
             </SettingsSection>
           )}
 
-          {activeTab === "notifications" && (
-            <SettingsSection title="Bildirimler" description="İşe alım süreçleriyle ilgili bildirim tercihleri.">
-              <PreferenceRow title="Aşama değişiklikleri" description="Bir adayın aşaması değiştirildiğinde bildirim alın." />
-              <PreferenceRow title="Görüşme hatırlatmaları" description="Yaklaşan görüşmeler için hatırlatma alın." />
-              <InfoNotice>Bildirim tercihlerini kaydetme özelliği yakında etkinleştirilecektir.</InfoNotice>
-            </SettingsSection>
-          )}
-
           {activeTab === "security" && (
             <SettingsSection title="Güvenlik" description="Oturum ve hesap güvenliği bilgileri.">
               <div className="flex items-start gap-3 rounded-lg border border-border p-4">
@@ -150,11 +140,6 @@ export default function Settings() {
             </SettingsSection>
           )}
 
-          {isCompanyAdmin && activeTab === "data" && (
-            <SettingsSection title="Veri Yönetimi" description="Şirket verilerinin dışa aktarım ve saklama ayarları.">
-              <InfoNotice>Veri dışa aktarma ve saklama politikaları yakında bu alandan yönetilebilecektir.</InfoNotice>
-            </SettingsSection>
-          )}
         </main>
       </div>
     </div>
@@ -178,18 +163,6 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
     <div>
       <p className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</p>
       <div className="min-h-10 rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-foreground">{value}</div>
-    </div>
-  );
-}
-
-function PreferenceRow({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="flex items-center justify-between gap-4 border-b border-border py-2 last:border-0">
-      <div>
-        <p className="text-sm font-medium text-foreground">{title}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
-      </div>
-      <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-medium text-muted-foreground">Yakında</span>
     </div>
   );
 }

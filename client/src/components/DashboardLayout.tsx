@@ -29,11 +29,11 @@ import { useTheme } from "@/contexts/ThemeContext";
 function getNavItems(role: string, permissions: string[] = []) {
   const ALL_ROLES = ["COMPANY_ADMIN", "HR", "RECRUITER", "GENERAL_MANAGER", "DEPARTMENT_MANAGER", "HIRING_MANAGER", "INTERVIEWER"];
   const base = [
-    { path: "/", label: "Kontrol Paneli", icon: LayoutDashboard, roles: ALL_ROLES },
+    { path: "/", label: "Kontrol paneli", icon: LayoutDashboard, roles: ALL_ROLES },
     { path: "/adaylar", label: "Adaylar", icon: Users, roles: ALL_ROLES },
     { path: "/pozisyonlar", label: "Pozisyonlar", icon: Briefcase, roles: ALL_ROLES },
     { path: "/departmanlar", label: "Departmanlar", icon: Building2, roles: ALL_ROLES },
-    { path: "/ise-alim-sureci", label: "İşe Alım Süreci", icon: GitBranch, roles: ALL_ROLES },
+    { path: "/ise-alim-sureci", label: "İşe alım süreci", icon: GitBranch, roles: ALL_ROLES },
   ];
 
   // İlk temas havuzu yalnızca İK ekibinin çalışma alanıdır.
