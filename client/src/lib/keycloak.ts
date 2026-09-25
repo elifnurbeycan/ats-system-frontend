@@ -17,7 +17,6 @@ export function saveKeycloakSession() {
   const isPlatformAdmin = roles.includes("SUPER_ADMIN");
   // keycloak-js access/refresh tokenlarını bellekte yönetir. Tokenı
   // sessionStorage'a kopyalamak XSS durumunda token hırsızlığını kolaylaştırır.
-  sessionStorage.removeItem("auth_token");
   sessionStorage.setItem("user_data", JSON.stringify({
     fullName: keycloak.tokenParsed.name || keycloak.tokenParsed.preferred_username || "Keycloak User",
     email: keycloak.tokenParsed.email || "",

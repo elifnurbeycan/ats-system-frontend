@@ -21,7 +21,7 @@ import AdminLogin from "./pages/AdminLogin";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import CompanyDetail from "./pages/CompanyDetail";
 import NotFound from "./pages/NotFound";
-import { keycloak, keycloakEnabled } from "./lib/keycloak";
+import { keycloak } from "./lib/keycloak";
 
 function AuthGuard({ children, requiredRole }: { children: React.ReactNode; requiredRole?: string }) {
   const [location, navigate] = useLocation();
@@ -29,7 +29,7 @@ function AuthGuard({ children, requiredRole }: { children: React.ReactNode; requ
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    const token = keycloakEnabled ? keycloak.authenticated : sessionStorage.getItem("auth_token");
+    const token = keycloak.authenticated;
     const userData = sessionStorage.getItem("user_data");
 
     if (!token || !userData) {

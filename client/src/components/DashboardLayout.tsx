@@ -7,8 +7,6 @@ import {
   Building2,
   Settings,
   ChevronLeft,
-  Search,
-  Bell,
   LogOut,
   Menu,
   GitBranch,
@@ -19,7 +17,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { authApi, type AuthenticatedUser } from "@/lib/api";
+import type { AuthenticatedUser } from "@/lib/api";
 import { toast } from "sonner";
 import { keycloak, keycloakEnabled, logoutFromKeycloak } from "@/lib/keycloak";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -150,18 +148,7 @@ export default function DashboardLayout({
       await logoutFromKeycloak(`${window.location.origin}/login`);
       return;
     }
-    const refreshToken = sessionStorage.getItem("refresh_token");
-    try {
-      if (refreshToken) {
-        await authApi.logout(refreshToken);
-      }
-    } catch {
-      // Silent fail on logout
-    }
-    sessionStorage.removeItem("auth_token");
-    sessionStorage.removeItem("refresh_token");
-    sessionStorage.removeItem("company_id");
-    sessionStorage.removeItem("user_data");
+    sessionStorage.clear();
     toast.success("Çıkış yapıldı");
     navigate("/login");
   };
@@ -302,17 +289,7 @@ export default function DashboardLayout({
             <Menu className="h-5 w-5" />
           </button>
 
-          {/* Search */}
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Aday, pozisyon ara..."
-              className="w-full rounded-xl bg-background border border-border pl-10 pr-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all duration-200"
-            />
-          </div>
-
-          <div className="flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-3">
             <button
               type="button"
               onClick={toggleTheme}
@@ -321,10 +298,6 @@ export default function DashboardLayout({
               aria-label={theme === "dark" ? "Açık temaya geç" : "Koyu temaya geç"}
             >
               {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </button>
-            <button className="relative p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-200">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-blue-500" />
             </button>
           </div>
         </header>
