@@ -31,13 +31,6 @@ function unwrapCollection<T>(data: T[] | PageData<T>): T[] {
   return Array.isArray(data) ? data : data.content;
 }
 
-export interface TokenResponse {
-  accessToken: string;
-  refreshToken: string;
-  tokenType: string;
-  expiresInSeconds: number;
-}
-
 export interface AuthenticatedUser {
   id: number;
   companyId: number;

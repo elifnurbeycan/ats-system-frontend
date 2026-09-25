@@ -11,10 +11,6 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
-export function getAuthToken(): string | null {
-  return sessionStorage.getItem("auth_token");
-}
-
 export function getCompanyId(): string {
   const direct = sessionStorage.getItem("company_id");
   if (direct) return direct;
@@ -25,10 +21,10 @@ export function getCompanyId(): string {
       const user = JSON.parse(raw);
       if (user.companyId) return String(user.companyId);
     } catch {
-      // Bozuk oturum verisinde geliştirme varsayılanına düşülür.
+      // Bozuk oturum verisiyle şirket seçilmez.
     }
   }
-  return import.meta.env.VITE_COMPANY_ID || "1";
+  throw new Error("Aktif şirket bilgisi bulunamadı. Lütfen yeniden giriş yapın.");
 }
 
 export function getUserRole(): string | null {
@@ -48,16 +44,7 @@ function createClient(baseURL: string, loginPath: "/login" | "/admin-login"): Ax
   });
 
   client.interceptors.request.use((config) => {
-    if (keycloakEnabled) {
-      // Keycloak etkinse legacy sessionStorage tokenına geri düşme.
-      // Böylece eski oturum tokenı yeni SSO oturumuna taşınamaz.
-      if (keycloak.token) {
-        config.headers.Authorization = `Bearer ${keycloak.token}`;
-      }
-      return config;
-    }
-    const token = getAuthToken();
-    if (token) config.headers.Authorization = `Bearer ${token}`;
+    if (keycloak.token) config.headers.Authorization = `Bearer ${keycloak.token}`;
     return config;
   });
 
@@ -90,14 +77,7 @@ function createClient(baseURL: string, loginPath: "/login" | "/admin-login"): Ax
 
         const currentPath = window.location.pathname;
         if (currentPath !== "/login" && currentPath !== "/admin-login") {
-          if (keycloakEnabled) {
-            void logoutFromKeycloak(`${window.location.origin}${loginPath}`);
-          } else {
-            ["auth_token", "refresh_token", "company_id", "user_data"].forEach((key) =>
-              sessionStorage.removeItem(key),
-            );
-            window.location.href = loginPath;
-          }
+          void logoutFromKeycloak(`${window.location.origin}${loginPath}`);
         }
       }
       return Promise.reject(error);

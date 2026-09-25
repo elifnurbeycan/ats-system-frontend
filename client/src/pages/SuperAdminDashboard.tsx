@@ -133,12 +133,6 @@ export default function SuperAdminDashboard() {
       await logoutFromKeycloak(`${window.location.origin}/admin-login`);
       return;
     }
-    const refreshToken = sessionStorage.getItem("refresh_token");
-    if (refreshToken) {
-      try {
-        await platformAuthApi.logout(refreshToken);
-      } catch {}
-    }
     sessionStorage.clear();
     window.location.href = "/admin-login";
   };
