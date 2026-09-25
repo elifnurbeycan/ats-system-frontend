@@ -8,6 +8,28 @@ ATS Frontend; adayların, ilk temas kayıtlarının, açık pozisyonların ve i�
 
 ![ATS giriş ekranı](docs/screenshots/giris.png)
 
+## Uygulama ekranları
+
+Arayüzün temel ekranlarından seçilmiş örnekler:
+
+| Kontrol paneli                                                                      | Koyu tema                                                                                    |
+| ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| <img src="docs/screenshots/dashboard-light.png" alt="Kontrol paneli" width="520" /> | <img src="docs/screenshots/dashboard-dark.png" alt="Koyu tema kontrol paneli" width="520" /> |
+
+| İletişim havuzu                                                                               | Pozisyonlar                                                                       |
+| --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| <img src="docs/screenshots/iletisim.png" alt="Departman bazlı iletişim havuzu" width="520" /> | <img src="docs/screenshots/pozisyonlar.png" alt="Pozisyon listesi" width="520" /> |
+
+| Adaylar                                                                                                              | Roller                                                                           |
+| -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| <img src="docs/screenshots/adaylar-sanitized.png" alt="Aday listesi, kişisel bilgiler maskelenmiştir" width="520" /> | <img src="docs/screenshots/roller.png" alt="Rol ve izin yönetimi" width="520" /> |
+
+| Kullanıcı yönetimi                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------- |
+| <img src="docs/screenshots/kullanicilar-sanitized.png" alt="Kullanıcı yönetimi, kişisel bilgiler maskelenmiştir" width="520" /> |
+
+> Aday ve kullanıcı ekranlarında görünen ad/e-posta alanları README paylaşımı için maskelenmiştir. Görseller yalnızca arayüz akışını göstermek amacıyla kullanılır.
+
 ## Öne çıkan özellikler
 
 - Aday, pozisyon, departman ve işe alım süreci yönetimi
