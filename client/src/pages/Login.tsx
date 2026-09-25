@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { authApi, type AuthenticatedUser } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,14 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (keycloakEnabled) {
+      void loginWithKeycloak();
+    }
+  }, []);
+
+  if (keycloakEnabled) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

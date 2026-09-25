@@ -32,7 +32,7 @@ export function EditPipelineDialog({ open, pipeline, saving, onOpenChange, onSav
         {form.stages.map((stage, index) => <div key={stage.id ?? `new-${index}`} className="grid gap-2 rounded-lg border border-border bg-muted/20 p-3 sm:grid-cols-[2rem_1fr_12rem_auto]">
           <span className="flex h-7 w-7 items-center justify-center rounded-md bg-muted text-xs font-semibold">{index + 1}</span>
           <Input value={stage.name} maxLength={150} placeholder="Aşama adı" onChange={(e) => updateStage(index, { name: e.target.value })} />
-          <Select value={stage.stageType} onValueChange={(value) => updateStage(index, { stageType: value as StageType })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ACTIVE">Aktif süreç</SelectItem><SelectItem value="HIRED">İşe alındı</SelectItem><SelectItem value="ON_HOLD">Beklemede</SelectItem><SelectItem value="REJECTED">Reddedildi</SelectItem></SelectContent></Select>
+          <Select value={stage.stageType} onValueChange={(value) => updateStage(index, { stageType: value as StageType })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ACTIVE">Aktif süreç</SelectItem><SelectItem value="HIRED">İşe alındı</SelectItem><SelectItem value="ON_HOLD">Beklemede</SelectItem><SelectItem value="REJECTED">Süreç sonlandı</SelectItem></SelectContent></Select>
           <Button type="button" variant="ghost" size="icon" title="Aşamayı sil" disabled={form.stages.length <= 1} onClick={() => removeStage(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
         </div>)}
         {!hasActiveStage && <p className="text-xs text-destructive">Pipeline içinde en az bir aktif süreç aşaması bulunmalıdır.</p>}

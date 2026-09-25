@@ -62,8 +62,12 @@ export const candidateApi = {
     const res = await apiClient.get<ApiResponse<PageData<CandidateNote>>>(`/${getCompanyId()}/candidates/${candidateId}/notes/evaluations`, { params: { candidateProcessId, page: 0, size: 100 } });
     return res.data.data.content;
   },
-  createEvaluation: async (candidateId: number, content: string, candidateProcessId?: number): Promise<CandidateNote> => {
-    const res = await apiClient.post<ApiResponse<CandidateNote>>(`/${getCompanyId()}/candidates/${candidateId}/notes/evaluations`, { content, candidateProcessId: candidateProcessId ?? null });
+  createEvaluation: async (candidateId: number, content: string, candidateProcessId?: number, pipelineStageId?: number): Promise<CandidateNote> => {
+    const res = await apiClient.post<ApiResponse<CandidateNote>>(`/${getCompanyId()}/candidates/${candidateId}/notes/evaluations`, {
+      content,
+      candidateProcessId: candidateProcessId ?? null,
+      pipelineStageId: pipelineStageId ?? null,
+    });
     return res.data.data;
   },
 };

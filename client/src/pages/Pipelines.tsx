@@ -311,7 +311,7 @@ export default function Pipelines() {
       ACTIVE: "Aktif",
       ON_HOLD: "Beklemede",
       HIRED: "İşe Alındı",
-      REJECTED: "Reddedildi",
+      REJECTED: "Süreç sonlandı",
     };
 
     try {
@@ -445,7 +445,7 @@ export default function Pipelines() {
       bg: "bg-red-50/50 dark:bg-red-950/30",
       badge: "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300",
       icon: XCircle,
-      label: "Reddedildi",
+      label: "Süreç sonlandı",
     },
   };
 
@@ -747,7 +747,7 @@ export default function Pipelines() {
                   <option value="ACTIVE">Aktif</option>
                   <option value="ON_HOLD">Beklemede</option>
                   <option value="HIRED">İşe Alındı</option>
-                  <option value="REJECTED">Reddedildi</option>
+                  <option value="REJECTED">Süreç sonlandı</option>
                 </select>
               </div>
             </div>
@@ -786,7 +786,7 @@ export default function Pipelines() {
                           ACTIVE: "Aktif",
                           ON_HOLD: "Beklemede",
                           HIRED: "İşe Alındı",
-                          REJECTED: "Reddedildi",
+                          REJECTED: "Süreç sonlandı",
                         };
 
                         const formattedDate = row.updatedAt
@@ -921,7 +921,7 @@ export default function Pipelines() {
                 </div>
                 <div className="p-3">
                   <p className="text-lg font-semibold text-red-500">{stats.rejected}</p>
-                  <p className="text-xs text-muted-foreground">Reddedilen</p>
+                  <p className="text-xs text-muted-foreground">Süreci sonlanan</p>
                 </div>
               </div>
             </div>
@@ -1057,7 +1057,7 @@ export default function Pipelines() {
                           <option value="ACTIVE">Aktif süreç</option>
                           <option value="ON_HOLD">Beklemede</option>
                           <option value="HIRED">İşe alındı</option>
-                          <option value="REJECTED">Reddedildi</option>
+                          <option value="REJECTED">Süreç sonlandı</option>
                         </select>
                         <input
                           value={stage.description}

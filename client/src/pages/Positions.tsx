@@ -11,6 +11,7 @@ import {
   Pencil,
   Trash2,
   Download,
+  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { positionApi, departmentApi, candidateApi } from "@/lib/api";
@@ -19,6 +20,9 @@ import { hasPermission } from "@/lib/permissions";
 import { exportExcel } from "@/lib/excel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import type { DateRange } from "react-day-picker";
+import { ColumnFilterMenu } from "@/components/table/ColumnFilterMenu";
+import { DateRangeFilter, isWithinDateRange } from "@/components/table/DateRangeFilter";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +46,8 @@ export default function Positions() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [departmentFilter, setDepartmentFilter] = useState<string>("ALL");
+  const [dateRange, setDateRange] = useState<DateRange>();
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
 
   const [positions, setPositions] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
@@ -204,15 +210,45 @@ export default function Positions() {
 
   const filtered = useMemo(() => {
     return positionsWithStats.filter((p) => {
+      const contains = (value: unknown, filter: string) => !filter
+        || String(value ?? "").toLocaleLowerCase("tr-TR").includes(filter.toLocaleLowerCase("tr-TR"));
+      const equals = (value: unknown, filter: string) => !filter || String(value ?? "") === filter;
       const matchesSearch =
         !search ||
         p.title.toLowerCase().includes(search.toLowerCase()) ||
         p.code.toLowerCase().includes(search.toLowerCase());
       const matchesStatus = statusFilter === "ALL" || p.status === statusFilter;
       const matchesDepartment = departmentFilter === "ALL" || String(p.departmentId) === departmentFilter;
-      return matchesSearch && matchesStatus && matchesDepartment;
+      return matchesSearch
+        && matchesStatus
+        && matchesDepartment
+        && contains(`${p.title} ${p.code}`, columnFilters.position || "")
+        && equals(p.departmentName, columnFilters.department || "")
+        && equals(p.candidateCount, columnFilters.candidates || "")
+        && equals(p.vacancyCount, columnFilters.vacancy || "")
+        && equals(p.status, columnFilters.status || "")
+        && (!columnFilters.openedDate
+          || (columnFilters.openedDate === "WITH" ? Boolean(p.openedAt) : !p.openedAt))
+        && isWithinDateRange(p.openedAt || p.createdAt, dateRange);
     });
-  }, [positionsWithStats, search, statusFilter, departmentFilter]);
+  }, [positionsWithStats, search, statusFilter, departmentFilter, columnFilters, dateRange]);
+
+  const positionColumnOptions = useMemo(() => {
+    const unique = (values: unknown[]) => Array.from(new Set(values.filter(Boolean).map(String)))
+      .sort((a, b) => a.localeCompare(b, "tr"))
+      .map((value) => ({ value, label: value }));
+    return {
+      departments: unique(positionsWithStats.map((position) => position.departmentName)),
+      candidateCounts: unique(positionsWithStats.map((position) => position.candidateCount)),
+      vacancyCounts: unique(positionsWithStats.map((position) => position.vacancyCount)),
+    };
+  }, [positionsWithStats]);
+
+  const setColumnFilter = (key: string, value: string) => {
+    setColumnFilters((current) => ({ ...current, [key]: value }));
+  };
+
+  const hasAdvancedFilters = Boolean(dateRange?.from || dateRange?.to || Object.values(columnFilters).some(Boolean));
 
   const exportPositions = async () => {
     if (filtered.length === 0) {
@@ -363,6 +399,7 @@ export default function Positions() {
             className="w-full rounded-xl bg-input/50 border border-border pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all duration-200"
           />
         </div>
+        <DateRangeFilter value={dateRange} onChange={setDateRange} label="Açılış tarihi" />
         <select
           value={departmentFilter}
           onChange={(event) => setDepartmentFilter(event.target.value)}
@@ -373,6 +410,18 @@ export default function Positions() {
             <option key={department.id} value={String(department.id)}>{department.name}</option>
           ))}
         </select>
+        {hasAdvancedFilters && (
+          <button
+            type="button"
+            onClick={() => {
+              setDateRange(undefined);
+              setColumnFilters({});
+            }}
+            className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-border px-3 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            <RotateCcw className="h-4 w-4" /> Filtreleri temizle
+          </button>
+        )}
         <div className="flex items-center gap-2 overflow-x-auto">
           {statusFilters.map((f) => (
             <button
@@ -398,19 +447,24 @@ export default function Positions() {
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
-                  Pozisyon
+                  <ColumnFilterMenu label="Pozisyon" value={columnFilters.position || ""} onChange={(value) => setColumnFilter("position", value)} placeholder="Ad veya kod ara..." />
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
-                  Departman
+                  <ColumnFilterMenu label="Departman" value={columnFilters.department || ""} onChange={(value) => setColumnFilter("department", value)} options={positionColumnOptions.departments} />
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
-                  Adaylar
+                  <ColumnFilterMenu label="Adaylar" value={columnFilters.candidates || ""} onChange={(value) => setColumnFilter("candidates", value)} options={positionColumnOptions.candidateCounts} />
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
-                  Boş Kontenjan
+                  <ColumnFilterMenu label="Boş Kontenjan" value={columnFilters.vacancy || ""} onChange={(value) => setColumnFilter("vacancy", value)} options={positionColumnOptions.vacancyCounts} />
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
-                  Durum
+                  <ColumnFilterMenu label="Durum" value={columnFilters.status || ""} onChange={(value) => setColumnFilter("status", value)}
+                    options={statusFilters.filter((item) => item.value !== "ALL")} />
+                </th>
+                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4 whitespace-nowrap">
+                  <ColumnFilterMenu label="Açılış Tarihi" value={columnFilters.openedDate || ""} onChange={(value) => setColumnFilter("openedDate", value)}
+                    options={[{ value: "WITH", label: "Açılmış pozisyonlar" }, { value: "WITHOUT", label: "Açılış tarihi olmayanlar" }]} />
                 </th>
                 <th className="px-6 py-4 w-28 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">İşlemler</th>
               </tr>
@@ -470,6 +524,13 @@ export default function Positions() {
                     >
                       <span className="h-1.5 w-1.5 rounded-full bg-current" />
                       {statusLabels[pos.status] || pos.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-xs text-muted-foreground">
+                      {pos.openedAt
+                        ? new Date(pos.openedAt).toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric" })
+                        : "—"}
                     </span>
                   </td>
                     <td className="px-6 py-4 text-center">
