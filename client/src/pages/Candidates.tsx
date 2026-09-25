@@ -7,8 +7,6 @@ import {
   MapPin,
   Plus,
   ExternalLink,
-  ChevronDown,
-  ChevronUp,
   Loader2,
   Pencil,
   Trash2,
@@ -38,6 +36,9 @@ import { hasPermission } from "@/lib/permissions";
 import { exportExcel } from "@/lib/excel";
 import { useApplicationContract } from "@/hooks/use-application-contract";
 import { formatFileSize, isAllowedFile } from "@/lib/api/application-contract";
+import type { DateRange } from "react-day-picker";
+import { ColumnFilterMenu } from "@/components/table/ColumnFilterMenu";
+import { DateRangeFilter, isWithinDateRange } from "@/components/table/DateRangeFilter";
 import {
   Select,
   SelectContent,
@@ -72,6 +73,8 @@ export default function Candidates() {
   const [serverSort, setServerSort] = useState("createdAt-desc");
   const [sortField, setSortField] = useState<string>("");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [dateRange, setDateRange] = useState<DateRange>();
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
   
   const [candidates, setCandidates] = useState<any[]>([]);
   const [pipelines, setPipelines] = useState<any[]>([]);
@@ -315,6 +318,8 @@ export default function Candidates() {
           stage: undefined,
           stageType: "ACTIVE",
           position: undefined,
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
         }];
       }
 
@@ -340,6 +345,8 @@ export default function Candidates() {
           stage,
           stageType: matchedStage?.stageType || process.currentStageType || "ACTIVE",
           completedAt: process.completedAt,
+          createdAt: process.createdAt,
+          updatedAt: process.updatedAt,
           position,
         };
       });
@@ -391,7 +398,31 @@ export default function Candidates() {
 
       const matchesDeleted = showDeleted ? !c.active : c.active;
 
-      return matchesSearch && matchesStage && matchesSelectedStage && matchesDeleted;
+      const contains = (value: unknown, filterKey: string) =>
+        !columnFilters[filterKey] || String(value || "").toLocaleLowerCase("tr-TR")
+          .includes(columnFilters[filterKey].toLocaleLowerCase("tr-TR"));
+      const equals = (value: unknown, filterKey: string) =>
+        !columnFilters[filterKey] || String(value || "") === columnFilters[filterKey];
+      const matchesLinkedIn = !columnFilters.linkedin
+        || (columnFilters.linkedin === "WITH" ? Boolean(c.linkedinUrl) : !c.linkedinUrl);
+      const matchesApplicationDate = !columnFilters.applicationDate
+        || (columnFilters.applicationDate === "WITH" ? Boolean(c.createdAt) : !c.createdAt);
+      const matchesResultDate = !columnFilters.resultDate
+        || (columnFilters.resultDate === "WITH" ? Boolean(c.completedAt) : !c.completedAt);
+      const matchesDate = isWithinDateRange(c.createdAt, dateRange);
+
+      return matchesSearch && matchesStage && matchesSelectedStage && matchesDeleted && matchesDate
+        && contains(`${c.firstName} ${c.lastName}`, "name")
+        && equals(c.position?.title, "position")
+        && equals(c.position?.departmentName, "department")
+        && equals(c.currentCompany, "company")
+        && contains(c.email, "email")
+        && contains(c.phone, "phone")
+        && matchesLinkedIn
+        && equals(c.city, "city")
+        && equals(c.stage?.name, "stage")
+        && matchesApplicationDate
+        && matchesResultDate;
     });
 
     // Tablo başlığıyla ayrıca sıralama seçilmişse mevcut sayfa üzerinde uygula.
@@ -427,7 +458,27 @@ export default function Candidates() {
     });
 
     return result;
-  }, [departmentCandidates, search, stageFilter, selectedStageId, showDeleted, sortField, sortDir]);
+  }, [departmentCandidates, search, stageFilter, selectedStageId, showDeleted, sortField, sortDir, columnFilters, dateRange]);
+
+  const columnOptions = useMemo(() => {
+    const unique = (values: Array<string | null | undefined>) => Array.from(new Set(values.filter(Boolean) as string[]))
+      .sort((a, b) => a.localeCompare(b, "tr-TR"))
+      .map((value) => ({ value, label: value }));
+    return {
+      positions: unique(candidatesWithStage.map((item) => item.position?.title)),
+      departments: unique(candidatesWithStage.map((item) => item.position?.departmentName)),
+      companies: unique(candidatesWithStage.map((item) => item.currentCompany)),
+      cities: unique(candidatesWithStage.map((item) => item.city)),
+      stages: unique(candidatesWithStage.map((item) => item.stage?.name)),
+    };
+  }, [candidatesWithStage]);
+
+  const setColumnFilter = (key: string, value: string) => {
+    setColumnFilters((current) => ({ ...current, [key]: value }));
+  };
+
+  const hasAdvancedFilters = Boolean(dateRange?.from || dateRange?.to
+    || Object.values(columnFilters).some(Boolean));
 
   const visiblePageNumbers = useMemo(() => {
     if (candidateTotalPages <= 7) {
@@ -438,13 +489,9 @@ export default function Candidates() {
     return Array.from({ length: 5 }, (_, index) => start + index);
   }, [candidatePage, candidateTotalPages]);
 
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortField(field);
-      setSortDir("asc");
-    }
+  const setColumnSort = (field: string, direction: "asc" | "desc") => {
+    setSortField(field);
+    setSortDir(direction);
   };
 
   const exportCandidates = async () => {
@@ -463,7 +510,8 @@ export default function Candidates() {
       "Departman": candidate.position?.departmentName,
       "Pipeline": candidate.pipelineName,
       "Aşama": candidate.stage?.name,
-      "Süreç Durumu": candidate.stageType === "HIRED" ? "İşe Alındı" : candidate.stageType === "REJECTED" ? "Reddedildi" : candidate.stageType === "ON_HOLD" ? "Beklemede" : "Aktif",
+      "Başvuru Tarihi": candidate.createdAt ? new Date(candidate.createdAt).toLocaleString("tr-TR") : "",
+      "Süreç Durumu": candidate.stageType === "HIRED" ? "İşe Alındı" : candidate.stageType === "REJECTED" ? "Süreç sonlandı" : candidate.stageType === "ON_HOLD" ? "Beklemede" : "Aktif",
       "Sonuç Zamanı": formatResultDate(candidate.completedAt) || "",
       "LinkedIn": candidate.linkedinUrl,
       "İhbar Süresi (Gün)": candidate.noticePeriodDays,
@@ -510,15 +558,8 @@ export default function Candidates() {
     { value: "ACTIVE", label: "Aktif" },
     { value: "ON_HOLD", label: "Beklemede" },
     { value: "HIRED", label: "İşe Alındı" },
-    { value: "REJECTED", label: "Reddedildi" },
+    { value: "REJECTED", label: "Süreç sonlandı" },
   ];
-
-  const SortIcon = ({ field }: { field: string }) => {
-    if (sortField !== field) return <ChevronDown className="h-3 w-3 text-muted-foreground/50" />;
-    return sortDir === "asc"
-      ? <ChevronUp className="h-3 w-3 text-primary" />
-      : <ChevronDown className="h-3 w-3 text-primary" />;
-  };
 
   if (loading && candidates.length === 0) {
     return (
@@ -640,6 +681,7 @@ export default function Candidates() {
             className="w-full rounded-xl bg-input/50 border border-border pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all duration-200"
           />
         </div>
+        <DateRangeFilter value={dateRange} onChange={setDateRange} label="Başvuru tarihi" />
         <Select
           value={departmentFilter}
           onValueChange={(value) => {
@@ -678,6 +720,18 @@ export default function Candidates() {
           </SelectContent>
         </Select>
         <div className="flex items-center gap-2 overflow-x-auto">
+          {hasAdvancedFilters && (
+            <button
+              type="button"
+              onClick={() => {
+                setDateRange(undefined);
+                setColumnFilters({});
+              }}
+              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-border px-3 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              <RotateCcw className="h-4 w-4" /> Filtreleri temizle
+            </button>
+          )}
           {canUpdateCandidate && (
             <button
               onClick={() => {
@@ -716,41 +770,45 @@ export default function Candidates() {
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-4">
-                  <button onClick={() => handleSort("name")} className="flex items-center gap-1.5 hover:text-foreground transition-colors">
-                    Aday <SortIcon field="name" />
-                  </button>
+                  <ColumnFilterMenu label="Aday" value={columnFilters.name || ""} onChange={(value) => setColumnFilter("name", value)}
+                    sortDirection={sortField === "name" ? sortDir : null} onSort={(direction) => setColumnSort("name", direction)} placeholder="Aday adı..." />
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-4">
-                  <button onClick={() => handleSort("position")} className="flex items-center gap-1.5 hover:text-foreground transition-colors">
-                    Başvurulan Pozisyon <SortIcon field="position" />
-                  </button>
+                  <ColumnFilterMenu label="Başvurulan Pozisyon" value={columnFilters.position || ""} onChange={(value) => setColumnFilter("position", value)}
+                    options={columnOptions.positions} sortDirection={sortField === "position" ? sortDir : null} onSort={(direction) => setColumnSort("position", direction)} />
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-4">
-                  <button onClick={() => handleSort("company")} className="flex items-center gap-1.5 hover:text-foreground transition-colors">
-                    Mevcut Şirket <SortIcon field="company" />
-                  </button>
+                  <ColumnFilterMenu label="Departman" value={columnFilters.department || ""} onChange={(value) => setColumnFilter("department", value)} options={columnOptions.departments} />
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-4">
-                  E-posta
+                  <ColumnFilterMenu label="Mevcut Şirket" value={columnFilters.company || ""} onChange={(value) => setColumnFilter("company", value)}
+                    options={columnOptions.companies} sortDirection={sortField === "company" ? sortDir : null} onSort={(direction) => setColumnSort("company", direction)} />
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-4">
-                  Telefon
+                  <ColumnFilterMenu label="E-posta" value={columnFilters.email || ""} onChange={(value) => setColumnFilter("email", value)} placeholder="E-posta ara..." />
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-4">
-                  LinkedIn
+                  <ColumnFilterMenu label="Telefon" value={columnFilters.phone || ""} onChange={(value) => setColumnFilter("phone", value)} placeholder="Telefon ara..." />
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-4">
-                  <button onClick={() => handleSort("city")} className="flex items-center gap-1.5 hover:text-foreground transition-colors">
-                    Şehir <SortIcon field="city" />
-                  </button>
+                  <ColumnFilterMenu label="LinkedIn" value={columnFilters.linkedin || ""} onChange={(value) => setColumnFilter("linkedin", value)}
+                    options={[{ value: "WITH", label: "LinkedIn'i olanlar" }, { value: "WITHOUT", label: "LinkedIn'i olmayanlar" }]} />
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-4">
-                  <button onClick={() => handleSort("stage")} className="flex items-center gap-1.5 hover:text-foreground transition-colors">
-                    Aşama <SortIcon field="stage" />
-                  </button>
+                  <ColumnFilterMenu label="Şehir" value={columnFilters.city || ""} onChange={(value) => setColumnFilter("city", value)}
+                    options={columnOptions.cities} sortDirection={sortField === "city" ? sortDir : null} onSort={(direction) => setColumnSort("city", direction)} />
+                </th>
+                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-4">
+                  <ColumnFilterMenu label="Aşama" value={columnFilters.stage || ""} onChange={(value) => setColumnFilter("stage", value)}
+                    options={columnOptions.stages} sortDirection={sortField === "stage" ? sortDir : null} onSort={(direction) => setColumnSort("stage", direction)} />
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-4 whitespace-nowrap">
-                  Sonuç Zamanı
+                  <ColumnFilterMenu label="Başvuru Tarihi" value={columnFilters.applicationDate || ""} onChange={(value) => setColumnFilter("applicationDate", value)}
+                    options={[{ value: "WITH", label: "Tarihi olanlar" }, { value: "WITHOUT", label: "Tarihi olmayanlar" }]} />
+                </th>
+                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-4 whitespace-nowrap">
+                  <ColumnFilterMenu label="Sonuç Zamanı" value={columnFilters.resultDate || ""} onChange={(value) => setColumnFilter("resultDate", value)}
+                    options={[{ value: "WITH", label: "Sonuçlananlar" }, { value: "WITHOUT", label: "Henüz sonuçlanmayanlar" }]} />
                 </th>
                 <th className="px-5 py-4 w-28 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">İşlemler</th>
               </tr>
@@ -789,12 +847,14 @@ export default function Candidates() {
                         <div className="text-sm text-foreground">
                           {candidate.position?.title || "—"}
                         </div>
-                        {candidate.position?.departmentName && (
-                          <div className="mt-0.5 truncate text-xs text-muted-foreground">
-                            {candidate.position.departmentName}
-                          </div>
-                        )}
                       </div>
+                    </td>
+
+                    {/* Departman */}
+                    <td className="px-5 py-3.5">
+                      <span className="text-sm text-muted-foreground">
+                        {candidate.position?.departmentName || "—"}
+                      </span>
                     </td>
 
                     {/* Mevcut Şirket */}
@@ -849,6 +909,21 @@ export default function Candidates() {
                             ? candidate.stage.name.split(" /")[0]
                             : candidate.stage.name}
                         </span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground/40">—</span>
+                      )}
+                    </td>
+
+                    {/* Başvuru tarihi */}
+                    <td className="px-5 py-3.5">
+                      {candidate.createdAt ? (
+                        <div className="min-w-[105px] text-xs text-foreground">
+                          {new Date(candidate.createdAt).toLocaleDateString("tr-TR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          })}
+                        </div>
                       ) : (
                         <span className="text-sm text-muted-foreground/40">—</span>
                       )}

@@ -58,6 +58,7 @@ export default function CandidateDetail() {
   const [detail, setDetail] = useState<CandidateDetail | null>(null);
   const [pipelines, setPipelines] = useState<any[]>([]);
   const [selectedProcessId, setSelectedProcessId] = useState<number | null>(null);
+  const [evaluationStageId, setEvaluationStageId] = useState<number | null>(null);
   const [stageHistory, setStageHistory] = useState<CandidateStageHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
@@ -110,10 +111,13 @@ export default function CandidateDetail() {
   const saveEntry = async (kind: "NOTE" | "EVALUATION") => {
     const content = entryText.trim();
     if (!content || !candidate) return toast.error("İçerik alanı zorunludur.");
+    if (kind === "EVALUATION" && (!selectedProcess?.id || !evaluationStageId)) {
+      return toast.error("Değerlendirme için başvuru ve aşama seçilmelidir.");
+    }
     setEntrySaving(true);
     try {
       if (kind === "NOTE") await candidateApi.createNote(candidate.id, content, selectedProcess?.id);
-      else await candidateApi.createEvaluation(candidate.id, content, selectedProcess?.id);
+      else await candidateApi.createEvaluation(candidate.id, content, selectedProcess?.id, evaluationStageId || undefined);
       setEntryText("");
       const processId = selectedProcess?.id;
       if (kind === "NOTE") setCandidateNotes(await candidateApi.getNotes(candidate.id, processId));
@@ -156,6 +160,10 @@ export default function CandidateDetail() {
       setSelectedProcessId(processes[0].id);
     }
   }, [processes, selectedProcessId]);
+
+  useEffect(() => {
+    setEvaluationStageId(selectedProcess?.currentStageId || null);
+  }, [selectedProcess?.id, selectedProcess?.currentStageId]);
 
   useEffect(() => {
     if (!selectedProcess?.id) return;
@@ -754,7 +762,7 @@ export default function CandidateDetail() {
                                 isRejected ? "bg-destructive/10 text-destructive border-destructive/20" :
                                 "bg-chart-2/10 text-chart-2 border-chart-2/20"
                               )}>
-                                {isHired ? "İşe Alındı" : isRejected ? "Reddedildi" : "Aktif"}
+                            {isHired ? "İşe Alındı" : isRejected ? "Süreç sonlandı" : "Aktif"}
                               </span>
                             </td>
                           </tr>
@@ -868,8 +876,21 @@ export default function CandidateDetail() {
             <div className="space-y-4 animate-fade-in">
               <div className="glass rounded-xl p-5"><h3 className="font-display font-semibold text-foreground">Ekip Değerlendirmeleri</h3><p className="mt-1 text-xs text-muted-foreground">Örneğin ekip lideri, adayla ilgili görüşünü bu alanda paylaşabilir.</p></div>
               <div className="glass rounded-xl p-5">
-                {canCreateEvaluation && <div className="mb-4 space-y-2"><textarea value={entryText} onChange={event => setEntryText(event.target.value)} placeholder="Aday değerlendirmesini yazın..." className="min-h-28 w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none" /><div className="flex justify-end"><button type="button" onClick={() => void saveEntry("EVALUATION")} disabled={entrySaving || !entryText.trim()} className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">Değerlendirme ekle</button></div></div>}
-                <div className="space-y-3">{candidateEvaluations.map(evaluation => <div key={evaluation.id} className="rounded-lg border border-border bg-muted/15 p-4"><div className="flex items-center gap-2 text-sm font-medium"><Star className="h-4 w-4 text-amber-500" /> Ekip değerlendirmesi</div><p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{evaluation.content}</p><p className="mt-2 text-xs text-muted-foreground">{new Date(evaluation.createdAt).toLocaleString("tr-TR")}</p></div>)}{!candidateEvaluations.length && <p className="text-sm text-muted-foreground">Henüz değerlendirme eklenmemiş.</p>}</div>
+                {canCreateEvaluation && <div className="mb-4 space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_18rem]">
+                    <div>
+                      <label htmlFor="evaluation-stage" className="mb-1.5 block text-xs font-medium text-muted-foreground">Değerlendirilen aşama</label>
+                      <select id="evaluation-stage" value={evaluationStageId || ""} onChange={event => setEvaluationStageId(Number(event.target.value) || null)} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                        <option value="">Aşama seçin</option>
+                        {activeStages.map(stage => <option key={stage.id} value={stage.id}>{stage.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex items-end text-xs text-muted-foreground">Değerlendirme seçtiğiniz başvuru ve aşamayla birlikte kaydedilir.</div>
+                  </div>
+                  <textarea value={entryText} onChange={event => setEntryText(event.target.value)} placeholder="Aday değerlendirmesini yazın..." className="min-h-28 w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none" />
+                  <div className="flex justify-end"><button type="button" onClick={() => void saveEntry("EVALUATION")} disabled={entrySaving || !entryText.trim() || !evaluationStageId} className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">Değerlendirme ekle</button></div>
+                </div>}
+                <div className="space-y-3">{candidateEvaluations.map(evaluation => <div key={evaluation.id} className="rounded-lg border border-border bg-muted/15 p-4"><div className="flex flex-wrap items-center gap-2 text-sm font-medium"><Star className="h-4 w-4 text-amber-500" /> Ekip değerlendirmesi {evaluation.pipelineStageName && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">{evaluation.pipelineStageName}</span>}</div><p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{evaluation.content}</p><p className="mt-2 text-xs text-muted-foreground">{new Date(evaluation.createdAt).toLocaleString("tr-TR")}</p></div>)}{!candidateEvaluations.length && <p className="text-sm text-muted-foreground">Henüz değerlendirme eklenmemiş.</p>}</div>
               </div>
             </div>
           )}

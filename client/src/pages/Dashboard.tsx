@@ -19,7 +19,10 @@ import {
 import { cn } from "@/lib/utils";
 import { dashboardApi, candidateApi, type DashboardData } from "@/lib/api";
 import { contactLeadApi, type ContactRejectionReason } from "@/lib/api/contact-lead-api";
+import { hasPermission } from "@/lib/permissions";
 import { toast } from "sonner";
+import type { DateRange } from "react-day-picker";
+import { DateRangeFilter, isWithinDateRange } from "@/components/table/DateRangeFilter";
 import {
   Area,
   AreaChart,
@@ -33,6 +36,7 @@ import {
 } from "recharts";
 
 export default function Dashboard() {
+  const canViewCommunications = hasPermission("CONTACT_LEAD_VIEW");
   const [data, setData] = useState<DashboardData | null>(null);
   const [recentCandidates, setRecentCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +45,9 @@ export default function Dashboard() {
     NO_RESPONSE: 0, NOT_INTERESTED: 0, POSITION_MISMATCH: 0, SALARY_EXPECTATION: 0,
     LOCATION: 0, TIMING: 0, ACCEPTED_ANOTHER_OFFER: 0, OTHER: 0,
   });
-  const [analysisPeriod, setAnalysisPeriod] = useState<"weekly" | "monthly" | "allTime">("weekly");
+  const [contactLeads, setContactLeads] = useState<Array<{ status: "CONTACTING" | "CONVERTED" | "REJECTED"; rejectionReason: ContactRejectionReason | null; createdAt: string }>>([]);
+  const [contactLeadsLoaded, setContactLeadsLoaded] = useState(false);
+  const [contactDateRange, setContactDateRange] = useState<DateRange>();
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -73,8 +79,7 @@ export default function Dashboard() {
       }
 
       try {
-        const roles = JSON.parse(sessionStorage.getItem("user_data") || "{}").roles || [];
-        if (roles.some((role: string) => role === "HR" || role === "RECRUITER")) {
+        if (canViewCommunications) {
           const [contacting, converted, rejected] = await Promise.all([
             contactLeadApi.getPage({ page: 0, size: 1, status: "CONTACTING" }),
             contactLeadApi.getPage({ page: 0, size: 1, status: "CONVERTED" }),
@@ -95,6 +100,13 @@ export default function Dashboard() {
           setContactRejectionStats(Object.fromEntries(rejectionReasons.map((reason, index) =>
             [reason, reasonPages[index].totalElements],
           )) as Record<ContactRejectionReason, number>);
+          const firstPage = await contactLeadApi.getPage({ page: 0, size: 100 });
+          const pages = [firstPage];
+          for (let currentPage = 1; currentPage < firstPage.totalPages; currentPage += 1) {
+            pages.push(await contactLeadApi.getPage({ page: currentPage, size: 100 }));
+          }
+          setContactLeads(pages.flatMap((result) => result.content));
+          setContactLeadsLoaded(true);
         }
       } catch {
         // İletişim modülü yetkisi olmayan kullanıcılarda panel gösterilmez.
@@ -104,7 +116,25 @@ export default function Dashboard() {
 
     };
     loadDashboardData();
-  }, []);
+  }, [canViewCommunications]);
+
+  useEffect(() => {
+    if (!contactLeadsLoaded) return;
+    const visible = contactLeads.filter((lead) => isWithinDateRange(lead.createdAt, contactDateRange));
+    setContactStats({
+      contacting: visible.filter((lead) => lead.status === "CONTACTING").length,
+      converted: visible.filter((lead) => lead.status === "CONVERTED").length,
+      rejected: visible.filter((lead) => lead.status === "REJECTED").length,
+    });
+    const rejectionReasons: ContactRejectionReason[] = [
+      "NO_RESPONSE", "NOT_INTERESTED", "POSITION_MISMATCH", "SALARY_EXPECTATION",
+      "LOCATION", "TIMING", "ACCEPTED_ANOTHER_OFFER", "OTHER",
+    ];
+    setContactRejectionStats(Object.fromEntries(rejectionReasons.map((reason) => [
+      reason,
+      visible.filter((lead) => lead.status === "REJECTED" && lead.rejectionReason === reason).length,
+    ])) as Record<ContactRejectionReason, number>);
+  }, [contactLeads, contactLeadsLoaded, contactDateRange]);
 
   const stats = useMemo(() => {
     if (!data) {
@@ -180,14 +210,6 @@ export default function Dashboard() {
     },
   ];
 
-  const canViewCommunications = (() => {
-    try {
-      const roles = JSON.parse(sessionStorage.getItem("user_data") || "{}").roles || [];
-      return roles.some((role: string) => role === "HR" || role === "RECRUITER");
-    } catch {
-      return false;
-    }
-  })();
   const resolvedContacts = contactStats.converted + contactStats.rejected;
   const positiveContactRate = resolvedContacts > 0
     ? Math.round((contactStats.converted / resolvedContacts) * 100)
@@ -204,14 +226,15 @@ export default function Dashboard() {
   };
   const rejectionReasonRows = (Object.entries(contactRejectionStats) as [ContactRejectionReason, number][])
     .sort(([, firstCount], [, secondCount]) => secondCount - firstCount);
+  const contactStatusChartData = [
+    { name: "İletişimde", kayıt: contactStats.contacting, fill: "#0284c7" },
+    { name: "Adaya dönüştü", kayıt: contactStats.converted, fill: "#10b981" },
+    { name: "Süreç sonlandı", kayıt: contactStats.rejected, fill: "#f43f5e" },
+  ];
 
-  const periodAnalytics = analysisPeriod === "weekly"
-    ? data?.weeklyAnalytics
-    : analysisPeriod === "monthly"
-      ? data?.monthlyAnalytics
-      : data?.allTimeAnalytics;
-  const periodLabel = analysisPeriod === "weekly" ? "Son 7 gün" : analysisPeriod === "monthly" ? "Son 30 gün" : "Sistem başlangıcından bugüne";
-  const periodTitle = analysisPeriod === "weekly" ? "Haftalık" : analysisPeriod === "monthly" ? "Aylık" : "Tüm Zamanlar";
+  const periodAnalytics = data?.allTimeAnalytics;
+  const periodLabel = "Sistem başlangıcından bugüne";
+  const periodTitle = "Genel";
   const periodHireRate = periodAnalytics?.newApplicationCount
     ? Math.round((periodAnalytics.hiredCount / periodAnalytics.newApplicationCount) * 100)
     : 0;
@@ -220,7 +243,8 @@ export default function Dashboard() {
     (data?.monthlyApplicationTrend || []).map((item) => ({
       label: new Date(item.monthStart).toLocaleDateString("tr-TR", { month: "short", year: "2-digit" }),
       başvuru: item.applicationCount,
-    })), [data?.monthlyApplicationTrend]);
+      monthStart: item.monthStart,
+    })).filter((item) => isWithinDateRange(item.monthStart, contactDateRange)), [data?.monthlyApplicationTrend, contactDateRange]);
 
   const departmentChartData = useMemo(() =>
     (data?.departmentDistribution || []).map((item) => ({
@@ -244,23 +268,7 @@ export default function Dashboard() {
           <h1 className="page-title">Kontrol Paneli</h1>
           <p className="text-muted-foreground mt-1">İşe alım metrikleri ve dönemsel performans analizi</p>
         </div>
-        <div className="inline-flex w-fit rounded-lg border border-border bg-card p-1 shadow-sm">
-          {(["weekly", "monthly", "allTime"] as const).map((period) => (
-            <button
-              type="button"
-              key={period}
-              onClick={() => setAnalysisPeriod(period)}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
-                analysisPeriod === period
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              {period === "weekly" ? "Haftalık" : period === "monthly" ? "Aylık" : "Tüm Zamanlar"}
-            </button>
-          ))}
-        </div>
+        <DateRangeFilter value={contactDateRange} onChange={setContactDateRange} label="Dashboard tarih aralığı" />
       </div>
 
       {/* Stat cards */}
@@ -306,15 +314,17 @@ export default function Dashboard() {
             <h2 className="section-title">İletişim Havuzu</h2>
             <p className="mt-1 text-xs text-muted-foreground">İlk temasların güncel durumu ve aday sürecine dönüşümü</p>
           </div>
-          <Link href="/iletisim" className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
-            İletişim kayıtlarını aç <ArrowUpRight className="h-4 w-4" />
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/iletisim" className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
+              İletişim kayıtlarını aç <ArrowUpRight className="h-4 w-4" />
+            </Link>
+          </div>
         </div>
         <div className="grid sm:grid-cols-2 xl:grid-cols-4">
           {[
             { label: "İletişimde bekleyen", value: contactStats.contacting, icon: MessageCircle, tone: "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300" },
             { label: "Aday sürecine alınan", value: contactStats.converted, icon: UserCheck, tone: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" },
-            { label: "İletişimde reddedilen", value: contactStats.rejected, icon: XCircle, tone: "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300" },
+            { label: "Süreci sonlanan", value: contactStats.rejected, icon: XCircle, tone: "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300" },
             { label: "Olumlu dönüş oranı", value: `%${positiveContactRate}`, icon: Send, tone: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300" },
           ].map((metric) => {
             const Icon = metric.icon;
@@ -328,20 +338,39 @@ export default function Dashboard() {
           <p className="text-xs text-muted-foreground">Olumlu dönüş oranı, sonuçlanan iletişimlerden aday sürecine aktarılanların oranıdır.</p>
           <div className="flex items-center gap-3"><div className="h-1.5 w-32 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${positiveContactRate}%` }} /></div><span className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">%{positiveContactRate}</span></div>
         </div>
-        <div className="border-t border-border p-5">
+        <div className="grid gap-5 border-t border-border p-5 xl:grid-cols-5">
+          <div className="xl:col-span-2">
           <div className="mb-4">
-            <h3 className="text-sm font-semibold text-foreground">İletişim ret nedenleri</h3>
-            <p className="mt-1 text-xs text-muted-foreground">İletişim aşamasında reddedilen kişilerin neden dağılımı</p>
+            <h3 className="text-sm font-semibold text-foreground">İletişim durumu</h3>
+            <p className="mt-1 text-xs text-muted-foreground">İletişim havuzundaki kayıtların güncel durum dağılımı</p>
           </div>
-          {contactStats.rejected === 0 ? <div className="rounded-xl border border-dashed border-border py-8 text-center text-sm text-muted-foreground">Henüz reddedilmiş iletişim kaydı bulunmuyor.</div> : <div className="overflow-hidden rounded-xl border border-border">
+          <div className="h-56 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={contactStatusChartData} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={11} />
+                <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={11} />
+                <Tooltip formatter={(value) => [`${value}`, "Kayıt"]} />
+                <Bar dataKey="kayıt" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="xl:col-span-3">
+          <div className="mb-4">
+            <h3 className="text-sm font-semibold text-foreground">Süreç sonlanma nedenleri</h3>
+            <p className="mt-1 text-xs text-muted-foreground">İletişim süreci sonlanan kişilerin neden dağılımı</p>
+          </div>
+          {contactStats.rejected === 0 ? <div className="rounded-xl border border-dashed border-border py-8 text-center text-sm text-muted-foreground">Henüz süreç sonlanma kaydı bulunmuyor.</div> : <div className="overflow-hidden rounded-xl border border-border">
             <table className="w-full text-left text-sm">
-              <thead className="bg-muted/35 text-xs uppercase text-muted-foreground"><tr><th className="px-4 py-3">Ret nedeni</th><th className="w-24 px-4 py-3 text-right">Kayıt</th><th className="w-[38%] px-4 py-3">Dağılım</th></tr></thead>
+              <thead className="bg-muted/35 text-xs uppercase text-muted-foreground"><tr><th className="px-4 py-3">Sonlanma nedeni</th><th className="w-24 px-4 py-3 text-right">Kayıt</th><th className="w-[38%] px-4 py-3">Dağılım</th></tr></thead>
               <tbody className="divide-y divide-border">{rejectionReasonRows.map(([reason, count]) => {
                 const percentage = contactStats.rejected > 0 ? Math.round((count / contactStats.rejected) * 100) : 0;
                 return <tr key={reason} className="hover:bg-muted/20"><td className="px-4 py-3 font-medium text-foreground">{rejectionReasonLabels[reason]}</td><td className="px-4 py-3 text-right font-mono font-semibold text-foreground">{count}</td><td className="px-4 py-3"><div className="flex items-center gap-3"><div className="h-2 flex-1 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-rose-500" style={{ width: `${percentage}%` }} /></div><span className="w-10 text-right font-mono text-xs font-semibold text-muted-foreground">%{percentage}</span></div></td></tr>;
               })}</tbody>
             </table>
           </div>}
+        </div>
         </div>
       </section>}
 
@@ -354,11 +383,9 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <CalendarDays className="h-4 w-4 text-primary" />
-            {analysisPeriod === "allTime"
-              ? "Bugüne kadar"
-              : periodAnalytics?.periodStart
-              ? `${new Date(periodAnalytics.periodStart).toLocaleDateString("tr-TR")} tarihinden beri`
-              : periodLabel}
+            {contactDateRange?.from
+              ? `${contactDateRange.from.toLocaleDateString("tr-TR")} tarihinden ${contactDateRange.to?.toLocaleDateString("tr-TR") || "bugüne"}`
+              : "Bugüne kadar"}
           </div>
         </div>
 
@@ -368,7 +395,7 @@ export default function Dashboard() {
             { label: "Yeni başvuru", value: periodAnalytics?.newApplicationCount || 0, icon: FilePlus2, tone: "text-indigo-600 bg-indigo-50" },
             { label: "Açılan pozisyon", value: periodAnalytics?.openedPositionCount || 0, icon: Briefcase, tone: "text-cyan-700 bg-cyan-50" },
             { label: "İşe alınan", value: periodAnalytics?.hiredCount || 0, icon: UserCheck, tone: "text-emerald-700 bg-emerald-50" },
-            { label: "Reddedilen", value: periodAnalytics?.rejectedCount || 0, icon: XCircle, tone: "text-rose-600 bg-rose-50" },
+            { label: "Süreci sonlanan", value: periodAnalytics?.rejectedCount || 0, icon: XCircle, tone: "text-rose-600 bg-rose-50" },
           ].map((metric) => {
             const Icon = metric.icon;
             return (
@@ -567,7 +594,7 @@ export default function Dashboard() {
             />
             <StatusRow
               icon={XCircle}
-              label="Reddedildi"
+              label="Süreç sonlandı"
               count={stats.rejectedCount}
               total={stats.totalProcesses}
               color="text-destructive"

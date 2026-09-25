@@ -317,6 +317,8 @@ export interface CandidateNote {
   id: number;
   candidateId: number;
   candidateProcessId: number | null;
+  pipelineStageId: number | null;
+  pipelineStageName: string | null;
   entryType: "NOTE" | "EVALUATION";
   content: string;
   createdBy: number | null;
