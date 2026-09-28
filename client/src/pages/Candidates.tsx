@@ -832,19 +832,13 @@ export default function Candidates() {
                   >
                     {/* Aday */}
                     <td className="px-5 py-3.5">
-                      <Link
-                        href={`/adaylar/${candidate.id}`}
-                        className="block rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        title={`${candidate.fullName || `${candidate.firstName} ${candidate.lastName}`} detayını aç`}
-                      >
-                        <CandidateIdentity
-                          candidateId={candidate.id}
-                          fullName={candidate.fullName || `${candidate.firstName} ${candidate.lastName}`}
-                          firstName={candidate.firstName}
-                          lastName={candidate.lastName}
-                          subtitle={candidate.currentJobTitle || "İş Unvanı Yok"}
-                        />
-                      </Link>
+                      <CandidateIdentity
+                        candidateId={candidate.id}
+                        fullName={candidate.fullName || `${candidate.firstName} ${candidate.lastName}`}
+                        firstName={candidate.firstName}
+                        lastName={candidate.lastName}
+                        subtitle={candidate.currentJobTitle || "İş Unvanı Yok"}
+                      />
                     </td>
 
                     {/* Pozisyon */}

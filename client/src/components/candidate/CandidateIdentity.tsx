@@ -36,7 +36,12 @@ export function CandidateIdentity({
   return (
     <Link
       href={`/adaylar/${candidateId}`}
-      className={cn("group/candidate flex min-w-0 items-center", compact ? "gap-2.5" : "gap-3", className)}
+      title={`${fullName} detayını aç`}
+      className={cn(
+        "group/candidate flex min-w-0 items-center rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50",
+        compact ? "gap-2.5" : "gap-3",
+        className
+      )}
     >
       <span
         className={cn(
