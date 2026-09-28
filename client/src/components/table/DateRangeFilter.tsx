@@ -67,3 +67,25 @@ export function isWithinDateRange(value: string | null | undefined, range: DateR
 
   return (!from || date >= from) && date <= to;
 }
+
+/** Aylık grafiklerde, ayın tamamı seçilen aralıkla kesişiyorsa ayı görünür kabul eder. */
+export function isMonthWithinDateRange(value: string | null | undefined, range: DateRange | undefined) {
+  if (!range?.from && !range?.to) return true;
+  if (!value) return false;
+
+  const monthStart = new Date(value);
+  if (Number.isNaN(monthStart.getTime())) return false;
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+
+  const monthEnd = new Date(monthStart);
+  monthEnd.setMonth(monthEnd.getMonth() + 1, 0);
+  monthEnd.setHours(23, 59, 59, 999);
+
+  const from = range.from ? new Date(range.from) : undefined;
+  if (from) from.setHours(0, 0, 0, 0);
+  const to = range.to ? new Date(range.to) : new Date();
+  to.setHours(23, 59, 59, 999);
+
+  return (!from || monthEnd >= from) && monthStart <= to;
+}

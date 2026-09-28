@@ -9,11 +9,13 @@ export default defineConfig({
     baseURL: "http://localhost:3000",
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], channel: "chrome" } }],
   webServer: {
     command: "pnpm exec vite --host 127.0.0.1 --port 3000 --strictPort",
     url: "http://127.0.0.1:3000",
-    reuseExistingServer: false,
+    // Yerel geliştirmede zaten çalışan Vite sunucusunu kullan; CI ortamında
+    // her test koşusu için temiz bir sunucu başlat.
+    reuseExistingServer: !process.env.CI,
     timeout: 30_000,
   },
 });

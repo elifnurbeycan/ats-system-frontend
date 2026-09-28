@@ -456,7 +456,7 @@ export default function CandidateDetail() {
         offeredSalary: toNumber(compensationForm.offeredSalary),
         salaryCurrency: compensationForm.salaryCurrency || null,
       });
-      toast.success(`${selectedProcess.positionTitle} için maaş bilgileri güncellendi.`);
+      toast.success(`${candidate?.fullName || "Aday"} adlı adayın ${selectedProcess.positionTitle} başvurusu için maaş bilgileri güncellendi.`);
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Maaş bilgileri güncellenemedi.");
     } finally {
@@ -890,7 +890,7 @@ export default function CandidateDetail() {
                   <textarea value={entryText} onChange={event => setEntryText(event.target.value)} placeholder="Aday değerlendirmesini yazın..." className="min-h-28 w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none" />
                   <div className="flex justify-end"><button type="button" onClick={() => void saveEntry("EVALUATION")} disabled={entrySaving || !entryText.trim() || !evaluationStageId} className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">Değerlendirme ekle</button></div>
                 </div>}
-                <div className="space-y-3">{candidateEvaluations.map(evaluation => <div key={evaluation.id} className="rounded-lg border border-border bg-muted/15 p-4"><div className="flex flex-wrap items-center gap-2 text-sm font-medium"><Star className="h-4 w-4 text-amber-500" /> Ekip değerlendirmesi {evaluation.pipelineStageName && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">{evaluation.pipelineStageName}</span>}</div><p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{evaluation.content}</p><p className="mt-2 text-xs text-muted-foreground">{new Date(evaluation.createdAt).toLocaleString("tr-TR")}</p></div>)}{!candidateEvaluations.length && <p className="text-sm text-muted-foreground">Henüz değerlendirme eklenmemiş.</p>}</div>
+                <div className="space-y-3">{candidateEvaluations.map(evaluation => <div key={evaluation.id} className="rounded-lg border border-border bg-muted/15 p-4"><div className="flex flex-wrap items-center gap-2 text-sm font-medium"><Star className="h-4 w-4 text-amber-500" /> Ekip değerlendirmesi {evaluation.pipelineStageName && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">{evaluation.pipelineStageName}</span>}</div><p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{evaluation.content}</p><p className="mt-2 text-xs text-muted-foreground">Değerlendiren: {evaluation.createdByName || "Bilinmiyor"} · {new Date(evaluation.createdAt).toLocaleString("tr-TR")}</p></div>)}{!candidateEvaluations.length && <p className="text-sm text-muted-foreground">Henüz değerlendirme eklenmemiş.</p>}</div>
               </div>
             </div>
           )}

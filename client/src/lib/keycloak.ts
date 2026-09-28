@@ -9,6 +9,22 @@ export const keycloak: KeycloakInstance = new Keycloak({
   clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || "ats-frontend",
 });
 
+let tokenRefreshTimer: number | undefined;
+
+function scheduleTokenRefresh() {
+  if (typeof window === "undefined") return;
+  if (tokenRefreshTimer !== undefined) window.clearInterval(tokenRefreshTimer);
+  tokenRefreshTimer = window.setInterval(async () => {
+    if (!keycloak.authenticated) return;
+    try {
+      // Erişim tokenı 5 dakika olsa da süresi dolmadan yenile.
+      await keycloak.updateToken(60);
+    } catch {
+      sessionStorage.clear();
+    }
+  }, 60_000);
+}
+
 export function saveKeycloakSession() {
   if (!keycloak.token || !keycloak.tokenParsed) return;
   const rawRoles = (keycloak.tokenParsed.realm_access?.roles as string[] | undefined) ?? [];
@@ -51,13 +67,25 @@ export async function initializeKeycloak(): Promise<boolean> {
     checkLoginIframe: false,
   });
   if (authenticated) {
-    saveKeycloakSession();
-    await loadBackendUserSession();
+    try {
+      const roles = (keycloak.tokenParsed?.realm_access?.roles as string[] | undefined) ?? [];
+      if (roles.includes("SUPER_ADMIN")) {
+        saveKeycloakSession();
+      } else {
+        // Şirket kullanıcısı yalnızca backend eşlemesi başarılı olduktan sonra
+        // oturum verisi almalıdır. Aksi halde kısmi Keycloak verisiyle uygulama
+        // açılır ve şirket kapsamı olmayan boş listeler gösterilebilir.
+        await loadBackendUserSession();
+      }
+      scheduleTokenRefresh();
+    } catch (error) {
+      sessionStorage.clear();
+      throw error;
+    }
   }
   keycloak.onTokenExpired = async () => {
     try {
       await keycloak.updateToken(30);
-      saveKeycloakSession();
     } catch {
       sessionStorage.clear();
     }

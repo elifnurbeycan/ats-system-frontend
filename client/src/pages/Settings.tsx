@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Building2, LockKeyhole, Shield, User, Webhook } from "lucide-react";
+import { Building2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { departmentApi, type AuthenticatedUser } from "@/lib/api";
 
-type TabId = "profile" | "security" | "organization" | "api";
+type TabId = "profile" | "organization";
 
 const ROLE_LABELS: Record<string, string> = {
   COMPANY_ADMIN: "Şirket yöneticisi",
@@ -49,11 +49,9 @@ export default function Settings() {
 
   const tabs = [
     { id: "profile" as const, label: "Profilim", icon: User },
-    { id: "security" as const, label: "Güvenlik", icon: Shield },
     ...(isCompanyAdmin
       ? [
           { id: "organization" as const, label: "Şirket", icon: Building2 },
-          { id: "api" as const, label: "API ve webhook", icon: Webhook },
         ]
       : []),
   ];
@@ -111,32 +109,12 @@ export default function Settings() {
             </SettingsSection>
           )}
 
-          {activeTab === "security" && (
-            <SettingsSection title="Güvenlik" description="Oturum ve hesap güvenliği bilgileri.">
-              <div className="flex items-start gap-3 rounded-lg border border-border p-4">
-                <LockKeyhole className="mt-0.5 h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-sm font-medium text-foreground">Aktif oturum</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Bu oturum tarayıcı kapatılana veya çıkış yapılana kadar geçerlidir.</p>
-                </div>
-              </div>
-              <InfoNotice>Şifre değiştirme işlemleri şu anda şirket yöneticiniz tarafından yürütülmektedir.</InfoNotice>
-            </SettingsSection>
-          )}
-
           {isCompanyAdmin && activeTab === "organization" && (
             <SettingsSection title="Şirket Bilgileri" description="Yalnızca şirket yöneticilerinin görebildiği kurumsal bilgiler.">
               <div className="grid gap-4 sm:grid-cols-2">
                 <ReadOnlyField label="Şirket kodu" value={user?.companyCode || "—"} />
                 <ReadOnlyField label="Şirket kimliği" value={user?.companyId ? String(user.companyId) : "—"} />
               </div>
-            </SettingsSection>
-          )}
-
-          {isCompanyAdmin && activeTab === "api" && (
-            <SettingsSection title="API & Webhook" description="Teknik entegrasyon bilgileri yalnızca şirket yöneticilerine açıktır.">
-              <ReadOnlyField label="API adresi" value={import.meta.env.VITE_API_URL || "Yapılandırılmamış"} />
-              <InfoNotice>Webhook yönetimi henüz etkinleştirilmemiştir.</InfoNotice>
             </SettingsSection>
           )}
 
