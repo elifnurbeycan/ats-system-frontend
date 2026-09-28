@@ -6,10 +6,11 @@ import {
   keycloak,
   keycloakEnabled,
   logoutFromKeycloak,
-  saveKeycloakSession,
+  refreshKeycloakSession,
 } from "../keycloak";
+import { runtimeConfig } from "../runtimeConfig";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const API_URL = runtimeConfig.apiUrl;
 
 export function getCompanyId(): string {
   const direct = sessionStorage.getItem("company_id");
@@ -24,7 +25,9 @@ export function getCompanyId(): string {
       // Bozuk oturum verisiyle şirket seçilmez.
     }
   }
-  throw new Error("Aktif şirket bilgisi bulunamadı. Lütfen yeniden giriş yapın.");
+  throw new Error(
+    "Aktif şirket bilgisi bulunamadı. Lütfen yeniden giriş yapın."
+  );
 }
 
 export function getUserRole(): string | null {
@@ -37,20 +40,24 @@ export function getUserRole(): string | null {
   }
 }
 
-function createClient(baseURL: string, loginPath: "/login" | "/admin-login"): AxiosInstance {
+function createClient(
+  baseURL: string,
+  loginPath: "/login" | "/admin-login"
+): AxiosInstance {
   const client = axios.create({
     baseURL,
     headers: { Accept: "application/json", "Content-Type": "application/json" },
   });
 
-  client.interceptors.request.use((config) => {
-    if (keycloak.token) config.headers.Authorization = `Bearer ${keycloak.token}`;
+  client.interceptors.request.use(config => {
+    if (keycloak.token)
+      config.headers.Authorization = `Bearer ${keycloak.token}`;
     return config;
   });
 
   client.interceptors.response.use(
-    (response) => response,
-    async (error) => {
+    response => response,
+    async error => {
       if (error.response?.status === 401) {
         const originalRequest = error.config as
           | (InternalAxiosRequestConfig & { _keycloakRetry?: boolean })
@@ -64,8 +71,7 @@ function createClient(baseURL: string, loginPath: "/login" | "/admin-login"): Ax
         ) {
           originalRequest._keycloakRetry = true;
           try {
-            await keycloak.updateToken(30);
-            saveKeycloakSession();
+            await refreshKeycloakSession(30);
             if (keycloak.token) {
               originalRequest.headers.Authorization = `Bearer ${keycloak.token}`;
               return client(originalRequest);
@@ -81,12 +87,15 @@ function createClient(baseURL: string, loginPath: "/login" | "/admin-login"): Ax
         }
       }
       return Promise.reject(error);
-    },
+    }
   );
   return client;
 }
 
 export const authClient = createClient(`${API_URL}/api/v1/auth`, "/login");
-export const platformClient = createClient(`${API_URL}/api/v1/platform`, "/admin-login");
+export const platformClient = createClient(
+  `${API_URL}/api/v1/platform`,
+  "/admin-login"
+);
 export const apiClient = createClient(`${API_URL}/api/v1/companies`, "/login");
 export const systemClient = createClient(`${API_URL}/api/v1`, "/login");
