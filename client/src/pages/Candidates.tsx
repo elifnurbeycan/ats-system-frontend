@@ -810,7 +810,7 @@ export default function Candidates() {
                   <ColumnFilterMenu label="Sonuç zamanı" value={columnFilters.resultDate || ""} onChange={(value) => setColumnFilter("resultDate", value)}
                     options={[{ value: "WITH", label: "Sonuçlananlar" }, { value: "WITHOUT", label: "Henüz sonuçlanmayanlar" }]} />
                 </th>
-                <th className="px-5 py-4 w-28 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">İşlemler</th>
+                <th className="sticky right-0 z-20 w-28 whitespace-nowrap bg-card px-3 py-4 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground shadow-[-6px_0_10px_-10px_rgba(15,23,42,0.45)]">İşlemler</th>
               </tr>
             </thead>
             <tbody>
@@ -832,13 +832,19 @@ export default function Candidates() {
                   >
                     {/* Aday */}
                     <td className="px-5 py-3.5">
-                      <CandidateIdentity
-                        candidateId={candidate.id}
-                        fullName={candidate.fullName || `${candidate.firstName} ${candidate.lastName}`}
-                        firstName={candidate.firstName}
-                        lastName={candidate.lastName}
-                        subtitle={candidate.currentJobTitle || "İş Unvanı Yok"}
-                      />
+                      <Link
+                        href={`/adaylar/${candidate.id}`}
+                        className="block rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        title={`${candidate.fullName || `${candidate.firstName} ${candidate.lastName}`} detayını aç`}
+                      >
+                        <CandidateIdentity
+                          candidateId={candidate.id}
+                          fullName={candidate.fullName || `${candidate.firstName} ${candidate.lastName}`}
+                          firstName={candidate.firstName}
+                          lastName={candidate.lastName}
+                          subtitle={candidate.currentJobTitle || "İş Unvanı Yok"}
+                        />
+                      </Link>
                     </td>
 
                     {/* Pozisyon */}
@@ -946,8 +952,8 @@ export default function Candidates() {
                     </td>
 
                     {/* İşlemler */}
-                    <td className="px-5 py-3.5 text-center">
-                      <div className="flex items-center justify-center gap-2">
+                    <td className="sticky right-0 whitespace-nowrap bg-card px-3 py-3.5 text-center shadow-[-6px_0_10px_-10px_rgba(15,23,42,0.45)] group-hover:bg-accent/30">
+                      <div className="flex items-center justify-center gap-1.5">
                         <Link href={`/adaylar/${candidate.id}`} title="Detayları Görüntüle">
                           <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors cursor-pointer" />
                         </Link>

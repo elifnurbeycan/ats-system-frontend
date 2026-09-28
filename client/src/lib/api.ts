@@ -315,6 +315,7 @@ export interface CandidateNote {
   entryType: "NOTE" | "EVALUATION";
   content: string;
   createdBy: number | null;
+  createdByName: string | null;
   createdAt: string;
   updatedAt: string;
   active: boolean;

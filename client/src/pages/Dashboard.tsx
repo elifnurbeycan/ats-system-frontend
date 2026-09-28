@@ -22,7 +22,7 @@ import { contactLeadApi, type ContactRejectionReason } from "@/lib/api/contact-l
 import { hasPermission } from "@/lib/permissions";
 import { toast } from "sonner";
 import type { DateRange } from "react-day-picker";
-import { DateRangeFilter, isWithinDateRange } from "@/components/table/DateRangeFilter";
+import { DateRangeFilter, isMonthWithinDateRange, isWithinDateRange } from "@/components/table/DateRangeFilter";
 import {
   Area,
   AreaChart,
@@ -242,9 +242,11 @@ export default function Dashboard() {
   const monthlyTrendData = useMemo(() =>
     (data?.monthlyApplicationTrend || []).map((item) => ({
       label: new Date(item.monthStart).toLocaleDateString("tr-TR", { month: "short", year: "2-digit" }),
-      başvuru: item.applicationCount,
+      // Tarih aralığı seçildiğinde 12 aylık ekseni koru; kapsam dışı ayları
+      // kaldırmak grafiği tek noktaya sıkıştırıyordu.
+      başvuru: isMonthWithinDateRange(item.monthStart, contactDateRange) ? item.applicationCount : 0,
       monthStart: item.monthStart,
-    })).filter((item) => isWithinDateRange(item.monthStart, contactDateRange)), [data?.monthlyApplicationTrend, contactDateRange]);
+    })), [data?.monthlyApplicationTrend, contactDateRange]);
 
   const departmentChartData = useMemo(() =>
     (data?.departmentDistribution || []).map((item) => ({
