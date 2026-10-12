@@ -85,7 +85,7 @@ export default function CandidateDetail() {
   const [compensationLoading, setCompensationLoading] = useState(false);
   const [compensationSaving, setCompensationSaving] = useState(false);
   const [compensationForm, setCompensationForm] = useState({
-    currentSalary: "", expectedSalary: "", offeredSalary: "", salaryCurrency: "TRY",
+    expectedSalary: "", salaryCurrency: "TRY",
   });
   const [candidateNotes, setCandidateNotes] = useState<CandidateNote[]>([]);
   const [candidateEvaluations, setCandidateEvaluations] = useState<CandidateNote[]>([]);
@@ -174,9 +174,7 @@ export default function CandidateDetail() {
         if (!active) return;
         setCompensationAllowed(true);
         setCompensationForm({
-          currentSalary: data.currentSalary == null ? "" : String(data.currentSalary),
           expectedSalary: data.expectedSalary == null ? "" : String(data.expectedSalary),
-          offeredSalary: data.offeredSalary == null ? "" : String(data.offeredSalary),
           salaryCurrency: data.salaryCurrency || "TRY",
         });
       })
@@ -438,12 +436,12 @@ export default function CandidateDetail() {
 
   const saveCompensation = async () => {
     if (!canUpdateCompensation) {
-      toast.error("Maaş ve teklif bilgilerini güncelleme yetkiniz bulunmuyor.");
+      toast.error("Maaş bilgilerini güncelleme yetkiniz bulunmuyor.");
       return;
     }
     if (!selectedProcess) return;
     const toNumber = (value: string) => value.trim() === "" ? null : Number(value);
-    const values = [compensationForm.currentSalary, compensationForm.expectedSalary, compensationForm.offeredSalary];
+    const values = [compensationForm.expectedSalary];
     if (values.some((value) => value !== "" && (!Number.isFinite(Number(value)) || Number(value) < 0))) {
       toast.error("Maaş alanlarına sıfır veya pozitif bir tutar girin.");
       return;
@@ -451,9 +449,7 @@ export default function CandidateDetail() {
     setCompensationSaving(true);
     try {
       await candidateProcessApi.updateCompensation(selectedProcess.id, {
-        currentSalary: toNumber(compensationForm.currentSalary),
         expectedSalary: toNumber(compensationForm.expectedSalary),
-        offeredSalary: toNumber(compensationForm.offeredSalary),
         salaryCurrency: compensationForm.salaryCurrency || null,
       });
       toast.success(`${candidate?.fullName || "Aday"} adlı adayın ${selectedProcess.positionTitle} başvurusu için maaş bilgileri güncellendi.`);
@@ -701,7 +697,7 @@ export default function CandidateDetail() {
                 <div className="glass rounded-xl p-5">
                   <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <h3 className="font-display font-semibold text-foreground">Maaş ve Teklif Bilgileri</h3>
+                      <h3 className="font-display font-semibold text-foreground">Maaş Bilgileri</h3>
                       <p className="mt-1 text-xs text-muted-foreground">Maaş bilgileri adayın seçili başvurusuna özel kaydedilir.</p>
                     </div>
                     <span className="rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary">{selectedProcess.positionTitle}</span>
@@ -715,17 +711,15 @@ export default function CandidateDetail() {
                   {compensationLoading ? (
                     <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
                   ) : (
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      <MoneyField label="Mevcut maaş" value={compensationForm.currentSalary} disabled={!canUpdateCompensation} onChange={(value) => setCompensationForm((form) => ({ ...form, currentSalary: value }))} />
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
                       <MoneyField label="Beklenen maaş" value={compensationForm.expectedSalary} disabled={!canUpdateCompensation} onChange={(value) => setCompensationForm((form) => ({ ...form, expectedSalary: value }))} />
-                      <MoneyField label="Teklif edilen" value={compensationForm.offeredSalary} disabled={!canUpdateCompensation} onChange={(value) => setCompensationForm((form) => ({ ...form, offeredSalary: value }))} />
                       <div>
                         <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Para birimi</label>
                         <select disabled={!canUpdateCompensation} value={compensationForm.salaryCurrency} onChange={(event) => setCompensationForm((form) => ({ ...form, salaryCurrency: event.target.value }))} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none disabled:cursor-not-allowed disabled:border-transparent disabled:bg-muted/40 disabled:text-foreground disabled:opacity-100">
                           {applicationContract.salaryCurrencies.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
                         </select>
                       </div>
-                      <div className="flex justify-end sm:col-span-2 lg:col-span-4">
+                      <div className="flex justify-end sm:col-span-2 lg:col-span-2">
                         {canUpdateCompensation && <button type="button" onClick={saveCompensation} disabled={compensationSaving} className="inline-flex items-center gap-2 rounded-md bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
                           {compensationSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Maaş bilgilerini kaydet
                         </button>}

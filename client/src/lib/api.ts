@@ -230,16 +230,12 @@ export interface PipelineBoard {
 
 export interface CandidateCompensation {
   candidateProcessId: number;
-  currentSalary: number | null;
   expectedSalary: number | null;
-  offeredSalary: number | null;
   salaryCurrency: string | null;
 }
 
 export interface UpdateCandidateCompensationRequest {
-  currentSalary: number | null;
   expectedSalary: number | null;
-  offeredSalary: number | null;
   salaryCurrency: string | null;
 }
 
